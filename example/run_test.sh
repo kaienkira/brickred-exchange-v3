@@ -35,11 +35,11 @@ cp "$script_path"/main.php .
 if [ $? -ne 0 ]; then exit 1; fi
 
 # cpp test
-brexc -f attr.xml -l cpp
+./brexc -f attr.xml -l cpp
 if [ $? -ne 0 ]; then exit 1; fi
-brexc -f message_test.xml -l cpp
+./brexc -f message_test.xml -l cpp
 if [ $? -ne 0 ]; then exit 1; fi
-brexc -f message_type.xml -l cpp
+./brexc -f message_type.xml -l cpp
 if [ $? -ne 0 ]; then exit 1; fi
 g++ -I "$script_path"/../cpp/src \
     -o "cpp_test" \
@@ -53,11 +53,11 @@ if [ $? -ne 0 ]; then exit 1; fi
 if [ $? -ne 0 ]; then exit 1; fi
 
 # csharp test
-brexc -f attr.xml -l csharp
+./brexc -f attr.xml -l csharp
 if [ $? -ne 0 ]; then exit 1; fi
-brexc -f message_test.xml -l csharp
+./brexc -f message_test.xml -l csharp
 if [ $? -ne 0 ]; then exit 1; fi
-brexc -f message_type.xml -l csharp
+./brexc -f message_type.xml -l csharp
 if [ $? -ne 0 ]; then exit 1; fi
 mcs -out:csharp_test.exe \
     main.cs \
@@ -73,11 +73,11 @@ if [ $? -ne 0 ]; then exit 1; fi
 if [ $? -ne 0 ]; then exit 1; fi
 
 # php test
-brexc -f attr.xml -l php
+./brexc -f attr.xml -l php
 if [ $? -ne 0 ]; then exit 1; fi
-brexc -f message_test.xml -l php
+./brexc -f message_test.xml -l php
 if [ $? -ne 0 ]; then exit 1; fi
-brexc -f message_type.xml -l php
+./brexc -f message_type.xml -l php
 if [ $? -ne 0 ]; then exit 1; fi
 php main.php > php.text
 if [ $? -ne 0 ]; then exit 1; fi

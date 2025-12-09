@@ -2,7 +2,28 @@ package main
 
 import (
 	"os"
+	"path/filepath"
+	"strings"
 )
+
+func utilGetFileNameWithoutExtension(filePath string) string {
+	base := filepath.Base(filePath)
+	ext := filepath.Ext(base)
+	if ext == "" {
+		return base
+	} else {
+		return strings.TrimSuffix(base, ext)
+	}
+}
+
+func utilGetFullPath(filePath string) string {
+	fullPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return ""
+	} else {
+		return fullPath
+	}
+}
 
 func utilCheckFileExists(filePath string) bool {
 	info, err := os.Stat(filePath)
