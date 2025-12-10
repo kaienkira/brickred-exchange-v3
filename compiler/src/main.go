@@ -87,5 +87,10 @@ func main() {
 		os.Exit(1)
 	}
 
+	parser := new(ProtocolParser)
+	if parser.Parse(optProtoFilePath, optSearchPath) == false {
+		os.Exit(1)
+	}
+
 	os.Exit(0)
 }

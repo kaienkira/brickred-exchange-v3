@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/antchfx/xmlquery"
 	"os"
 	"path/filepath"
-	//"github.com/antchfx/xmlquery"
+	"strings"
 )
 
 type ProtocolParser struct {
@@ -25,29 +26,7 @@ func (this *ProtocolParser) Parse(
 	return true
 }
 
-func (this *ProtocolParser) parseProtocol(
-	protoFilePath string, protoSearchPath []string) *ProtocolDef {
-	var protoDef *ProtocolDef = nil
-
-	// check is already imported
-	protoName := utilGetFileNameWithoutExtension(protoFilePath)
-	if protoDef, ok := this.Descriptor.ImportedProtos[protoName]; ok {
-		return protoDef
-	}
-
-	// get file full path
-	protoFileFullPath := getProtoFileFullPath(protoFilePath, protoSearchPath)
-	if protoFileFullPath == "" {
-		fmt.Fprintf(os.Stderr,
-			"error: can not find protocol file `%s`\n",
-			protoFilePath)
-		return nil
-	}
-
-	return protoDef
-}
-
-func getProtoFileFullPath(
+func (this *ProtocolParser) getProtoFileFullPath(
 	protoFilePath string, protoSearchPath []string) string {
 	fileExists := false
 	// find proto file path directly first
@@ -70,4 +49,53 @@ func getProtoFileFullPath(
 	} else {
 		return ""
 	}
+}
+
+func (this *ProtocolParser) loadProtoFile(filePath string) *xmlquery.Node {
+	fileBin, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"error: can not read protocol file `%s`: %s\n",
+			filePath, err.Error())
+		return nil
+	}
+	fileText := string(fileBin)
+
+	doc, err := xmlquery.Parse(strings.NewReader(fileText))
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"error: can not parse protocol file `%s`: %s\n",
+			filePath, err.Error())
+		return nil
+	}
+
+	return doc
+}
+
+func (this *ProtocolParser) parseProtocol(
+	protoFilePath string, protoSearchPath []string) *ProtocolDef {
+	var protoDef *ProtocolDef = nil
+
+	// check is already imported
+	protoName := utilGetFileNameWithoutExtension(protoFilePath)
+	if protoDef, ok := this.Descriptor.ImportedProtos[protoName]; ok {
+		return protoDef
+	}
+
+	// get file full path
+	protoFileFullPath := this.getProtoFileFullPath(protoFilePath, protoSearchPath)
+	if protoFileFullPath == "" {
+		fmt.Fprintf(os.Stderr,
+			"error: can not find protocol file `%s`\n",
+			protoFilePath)
+		return nil
+	}
+
+	// load xml doc
+	doc := this.loadProtoFile(protoFileFullPath)
+	if doc == nil {
+		return nil
+	}
+
+	return protoDef
 }
