@@ -26,6 +26,20 @@ func (this *ProtocolParser) Parse(
 	return true
 }
 
+func (this *ProtocolParser) printLineError(
+	fileName string, lineNumber int, format string, args ...any) {
+	fmt.Fprintf(os.Stderr,
+		"error:%s:%d: %s\n",
+		fileName, lineNumber,
+		fmt.Sprintf(format, args...))
+}
+
+func (this *ProtocolParser) printNodeError(
+	protoDef *ProtocolDef, element *xmlquery.Node,
+	format string, args ...any) {
+	this.printLineError(protoDef.FilePath, element.LineNumber, format, args...)
+}
+
 func (this *ProtocolParser) getProtoFileFullPath(
 	protoFilePath string, protoSearchPath []string) string {
 	fileExists := false
@@ -61,7 +75,10 @@ func (this *ProtocolParser) loadProtoFile(filePath string) *xmlquery.Node {
 	}
 	fileText := string(fileBin)
 
-	doc, err := xmlquery.Parse(strings.NewReader(fileText))
+	xmlDoc, err := xmlquery.ParseWithOptions(strings.NewReader(fileText),
+		xmlquery.ParserOptions{
+			WithLineNumbers: true,
+		})
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
 			"error: can not parse protocol file `%s`: %s\n",
@@ -69,7 +86,7 @@ func (this *ProtocolParser) loadProtoFile(filePath string) *xmlquery.Node {
 		return nil
 	}
 
-	return doc
+	return xmlDoc
 }
 
 func (this *ProtocolParser) parseProtocol(
@@ -91,9 +108,32 @@ func (this *ProtocolParser) parseProtocol(
 		return nil
 	}
 
-	// load xml doc
-	doc := this.loadProtoFile(protoFileFullPath)
-	if doc == nil {
+	// load xml xmlDoc
+	xmlDoc := this.loadProtoFile(protoFileFullPath)
+	if xmlDoc == nil {
+		return nil
+	}
+
+	protoDef = new(ProtocolDef)
+	protoDef.Name = protoName
+	protoDef.FilePath = protoFileFullPath
+
+	// add to imported cache first to prevent circular import
+	this.Descriptor.ImportedProtos[protoName] = protoDef
+
+	// check root node name
+	var rootNode *xmlquery.Node = nil
+	for _, child := range xmlDoc.ChildNodes() {
+		if child.Type == xmlquery.ElementNode {
+			rootNode = child
+			break
+		}
+	}
+	if rootNode == nil ||
+		rootNode.Type != xmlquery.ElementNode ||
+		rootNode.Data != "protocol" {
+		this.printNodeError(protoDef, rootNode,
+			"root node must be `protocol` node")
 		return nil
 	}
 
