@@ -38,11 +38,23 @@ func (this *ProtocolParser) printLineError(
 }
 
 func (this *ProtocolParser) printNodeError(
-	protoDef *ProtocolDef, element *xmlquery.Node,
+	protoDef *ProtocolDef, node *xmlquery.Node,
 	format string, args ...any) {
 
 	this.printLineError(
-		protoDef.FilePath, element.LineNumber, format, args...)
+		protoDef.FilePath, node.LineNumber, format, args...)
+}
+
+func (this *ProtocolParser) getNodeAttr(
+	node *xmlquery.Node, attrName string) *xmlquery.Attr {
+
+	for _, attr := range node.Attr {
+		if attr.Name.Local == attrName {
+			return &attr
+		}
+	}
+
+	return nil
 }
 
 func (this *ProtocolParser) getProtoFileFullPath(
@@ -128,6 +140,13 @@ func (this *ProtocolParser) parseProtocol(
 	protoDef.FilePath = protoFileFullPath
 	protoDef.Imports = make([]*ImportDef, 0)
 	protoDef.ImportNameIndex = make(map[string]*ImportDef)
+	protoDef.Namespaces = make(map[string]*NamespaceDef)
+	protoDef.Enums = make([]*EnumDef, 0)
+	protoDef.EnumMapNameIndex = make(map[string]*EnumMapDef)
+	protoDef.Structs = make([]*StructDef, 0)
+	protoDef.StructNameIndex = make(map[string]*StructDef)
+	protoDef.EnumMaps = make([]*EnumMapDef, 0)
+	protoDef.EnumMapNameIndex = make(map[string]*EnumMapDef)
 
 	// add to imported cache first to prevent circular import
 	this.Descriptor.ImportedProtos[protoName] = protoDef
@@ -212,6 +231,43 @@ func (this *ProtocolParser) addImportDef(
 
 func (this *ProtocolParser) addNamespaceDef(
 	protoDef *ProtocolDef, node *xmlquery.Node) bool {
+
+	// check lang attr
+	var lang string
+	{
+		attr := this.getNodeAttr(node, "lang")
+		if attr == nil {
+			this.printNodeError(protoDef, node,
+				"`namespace` node must contain a `lang` attribute")
+			return false
+		}
+		lang = attr.Value
+		if lang == "" {
+			this.printNodeError(protoDef, node,
+				"`namespace` node `lang` attribute is invalid")
+			return false
+		}
+	}
+	if _, ok := protoDef.Namespaces[lang]; ok {
+		this.printNodeError(protoDef, node,
+			"`namespace` node `lang` attribute duplicated")
+		return false
+	}
+
+	// check namespace value
+	namespaceStr := node.InnerText()
+	if namespaceStr == "" {
+		this.printNodeError(protoDef, node,
+			"`namespace` node value can not be empty")
+		return false
+	}
+
+	// check namespace parts
+	/*
+	namespaceParts := strings.Split(namespaceStr, ".")
+	for _, part := range namespaceParts {
+	}
+	*/
 
 	return true
 }
