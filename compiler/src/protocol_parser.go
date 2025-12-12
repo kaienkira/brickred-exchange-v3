@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/antchfx/xmlquery"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/antchfx/xmlquery"
 )
 
 type ProtocolParser struct {
@@ -14,6 +15,7 @@ type ProtocolParser struct {
 
 func (this *ProtocolParser) Parse(
 	protoFilePath string, protoSearchPath []string) bool {
+
 	this.Descriptor = new(ProtocolDescriptor)
 	this.Descriptor.ImportedProtos = make(map[string]*ProtocolDef)
 	this.Descriptor.ProtoDef =
@@ -28,6 +30,7 @@ func (this *ProtocolParser) Parse(
 
 func (this *ProtocolParser) printLineError(
 	fileName string, lineNumber int, format string, args ...any) {
+
 	fmt.Fprintf(os.Stderr,
 		"error:%s:%d: %s\n",
 		fileName, lineNumber,
@@ -37,11 +40,14 @@ func (this *ProtocolParser) printLineError(
 func (this *ProtocolParser) printNodeError(
 	protoDef *ProtocolDef, element *xmlquery.Node,
 	format string, args ...any) {
-	this.printLineError(protoDef.FilePath, element.LineNumber, format, args...)
+
+	this.printLineError(
+		protoDef.FilePath, element.LineNumber, format, args...)
 }
 
 func (this *ProtocolParser) getProtoFileFullPath(
 	protoFilePath string, protoSearchPath []string) string {
+
 	fileExists := false
 	// find proto file path directly first
 	if utilCheckFileExists(protoFilePath) {
@@ -66,6 +72,7 @@ func (this *ProtocolParser) getProtoFileFullPath(
 }
 
 func (this *ProtocolParser) loadProtoFile(filePath string) *xmlquery.Node {
+
 	fileBin, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
@@ -91,6 +98,7 @@ func (this *ProtocolParser) loadProtoFile(filePath string) *xmlquery.Node {
 
 func (this *ProtocolParser) parseProtocol(
 	protoFilePath string, protoSearchPath []string) *ProtocolDef {
+
 	var protoDef *ProtocolDef = nil
 
 	// check is already imported
@@ -100,7 +108,8 @@ func (this *ProtocolParser) parseProtocol(
 	}
 
 	// get file full path
-	protoFileFullPath := this.getProtoFileFullPath(protoFilePath, protoSearchPath)
+	protoFileFullPath := this.getProtoFileFullPath(
+		protoFilePath, protoSearchPath)
 	if protoFileFullPath == "" {
 		fmt.Fprintf(os.Stderr,
 			"error: can not find protocol file `%s`\n",
@@ -117,6 +126,8 @@ func (this *ProtocolParser) parseProtocol(
 	protoDef = new(ProtocolDef)
 	protoDef.Name = protoName
 	protoDef.FilePath = protoFileFullPath
+	protoDef.Imports = make([]*ImportDef, 0)
+	protoDef.ImportNameIndex = make(map[string]*ImportDef)
 
 	// add to imported cache first to prevent circular import
 	this.Descriptor.ImportedProtos[protoName] = protoDef
@@ -137,5 +148,70 @@ func (this *ProtocolParser) parseProtocol(
 		return nil
 	}
 
+	// parse imports
+	{
+		nodes := xmlquery.Find(rootNode, "/import")
+		for _, node := range nodes {
+			// check import self
+			refProtoPath := node.InnerText()
+			refProtoName := utilGetFileNameWithoutExtension(refProtoPath)
+			if refProtoName == protoName {
+				this.printNodeError(protoDef, node,
+					"can not import self")
+				return nil
+			}
+			externalProtoDef := this.parseProtocol(
+				refProtoPath, protoSearchPath)
+			if externalProtoDef == nil {
+				this.printNodeError(protoDef, node,
+					"load external file `%s` failed",
+					refProtoPath)
+				return nil
+			}
+
+			if this.addImportDef(protoDef, node, externalProtoDef) == false {
+				return nil
+			}
+		}
+	}
+
+	// parse namespaces
+	{
+		nodes := xmlquery.Find(rootNode, "/namespace")
+		for _, node := range nodes {
+			if this.addNamespaceDef(protoDef, node) == false {
+				return nil
+			}
+		}
+	}
+
 	return protoDef
+}
+
+func (this *ProtocolParser) addImportDef(
+	protoDef *ProtocolDef, node *xmlquery.Node,
+	externalProtoDef *ProtocolDef) bool {
+
+	def := new(ImportDef)
+	def.ParentRef = protoDef
+	def.Name = externalProtoDef.Name
+	def.LineNumber = node.LineNumber
+	def.ProtoDef = externalProtoDef
+
+	if _, ok := protoDef.ImportNameIndex[def.Name]; ok {
+		this.printNodeError(protoDef, node,
+			"import `%s` duplicated", def.Name)
+		return false
+	}
+
+	protoDef.Imports = append(protoDef.Imports, def)
+	protoDef.ImportNameIndex[def.Name] = def
+
+	return true
+}
+
+func (this *ProtocolParser) addNamespaceDef(
+	protoDef *ProtocolDef, node *xmlquery.Node) bool {
+
+	return true
 }
