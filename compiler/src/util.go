@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -47,4 +48,10 @@ func utilCheckDirExists(dirPath string) bool {
 	}
 
 	return true
+}
+
+var varNameRegexp *regexp.Regexp = regexp.MustCompile(`^[a-zA-Z_]\w*$`)
+
+func utilIsValidVarName(name string) bool {
+	return varNameRegexp.MatchString(name)
 }

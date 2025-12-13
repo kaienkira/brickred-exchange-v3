@@ -211,17 +211,17 @@ func (this *ProtocolParser) addImportDef(
 	protoDef *ProtocolDef, node *xmlquery.Node,
 	externalProtoDef *ProtocolDef) bool {
 
+	if _, ok := protoDef.ImportNameIndex[externalProtoDef.Name]; ok {
+		this.printNodeError(protoDef, node,
+			"import `%s` duplicated", externalProtoDef.Name)
+		return false
+	}
+
 	def := new(ImportDef)
 	def.ParentRef = protoDef
 	def.Name = externalProtoDef.Name
 	def.LineNumber = node.LineNumber
 	def.ProtoDef = externalProtoDef
-
-	if _, ok := protoDef.ImportNameIndex[def.Name]; ok {
-		this.printNodeError(protoDef, node,
-			"import `%s` duplicated", def.Name)
-		return false
-	}
 
 	protoDef.Imports = append(protoDef.Imports, def)
 	protoDef.ImportNameIndex[def.Name] = def
@@ -263,11 +263,23 @@ func (this *ProtocolParser) addNamespaceDef(
 	}
 
 	// check namespace parts
-	/*
 	namespaceParts := strings.Split(namespaceStr, ".")
 	for _, part := range namespaceParts {
+		if utilIsValidVarName(part) == false {
+			this.printNodeError(protoDef, node,
+				"`namespace` node value is invalid")
+			return false
+		}
 	}
-	*/
+
+	def := new(NamespaceDef)
+	def.ParentRef = protoDef
+	def.Language = lang
+	def.LineNumber = node.LineNumber
+	def.Namespace = namespaceStr
+	def.NamespaceParts = namespaceParts
+
+	protoDef.Namespaces[def.Language] = def
 
 	return true
 }
