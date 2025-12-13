@@ -142,7 +142,7 @@ func (this *ProtocolParser) parseProtocol(
 	protoDef.ImportNameIndex = make(map[string]*ImportDef)
 	protoDef.Namespaces = make(map[string]*NamespaceDef)
 	protoDef.Enums = make([]*EnumDef, 0)
-	protoDef.EnumMapNameIndex = make(map[string]*EnumMapDef)
+	protoDef.EnumNameIndex = make(map[string]*EnumDef)
 	protoDef.Structs = make([]*StructDef, 0)
 	protoDef.StructNameIndex = make(map[string]*StructDef)
 	protoDef.EnumMaps = make([]*EnumMapDef, 0)
@@ -199,6 +199,16 @@ func (this *ProtocolParser) parseProtocol(
 		nodes := xmlquery.Find(rootNode, "/namespace")
 		for _, node := range nodes {
 			if this.addNamespaceDef(protoDef, node) == false {
+				return nil
+			}
+		}
+	}
+
+	// parse enums
+	{
+		nodes := xmlquery.Find(rootNode, "/enum")
+		for _, node := range nodes {
+			if this.addEnumDef(protoDef, node) == false {
 				return nil
 			}
 		}
@@ -280,6 +290,94 @@ func (this *ProtocolParser) addNamespaceDef(
 	def.NamespaceParts = namespaceParts
 
 	protoDef.Namespaces[def.Language] = def
+
+	return true
+}
+
+func (this *ProtocolParser) addEnumDef(
+	protoDef *ProtocolDef, node *xmlquery.Node) bool {
+
+	// check name attr
+	var name string
+	{
+		attr := this.getNodeAttr(node, "name")
+		if attr == nil {
+			this.printNodeError(protoDef, node,
+				"`enum` node must contain a `name` attribute")
+			return false
+		}
+		name = attr.Value
+	}
+	if utilIsValidVarName(name) == false {
+		this.printNodeError(protoDef, node,
+			"`enum` node `name` attribute is invalid")
+		return false
+	}
+	{
+		ok := false
+		if _, ok = protoDef.EnumNameIndex[name]; ok == false {
+			if _, ok = protoDef.StructNameIndex[name]; ok == false {
+				_, ok = protoDef.EnumMapNameIndex[name]
+			}
+		}
+		if ok {
+			this.printNodeError(protoDef, node,
+				"`enum` node `name` attribute duplicated")
+			return false
+		}
+	}
+
+	def := new(EnumDef)
+	def.ParentRef = protoDef
+	def.Name = name
+	def.LineNumber = node.LineNumber
+
+	// parse items
+	for _, childNode := range node.ChildNodes() {
+		if childNode.Type != xmlquery.ElementNode {
+			continue
+		}
+		if childNode.Data != "item" {
+			this.printNodeError(protoDef, childNode,
+				"expect a `item` node")
+			return false
+		}
+
+		if this.addEnumItemDef(protoDef, def, childNode) == false {
+			return false
+		}
+	}
+
+	protoDef.Enums = append(protoDef.Enums, def)
+	protoDef.EnumNameIndex[name] = def
+
+	return true
+}
+
+func (this *ProtocolParser) addEnumItemDef(
+	protoDef *ProtocolDef, enumDef *EnumDef, node *xmlquery.Node) bool {
+
+	// check name attr
+	var name string
+	{
+		attr := this.getNodeAttr(node, "name")
+		if attr == nil {
+			this.printNodeError(protoDef, node,
+				"`item` node must contain a `name` attribute")
+			return false
+		}
+		name = attr.Value
+	}
+	if utilIsValidVarName(name) == false {
+		this.printNodeError(protoDef, node,
+			"`item` node `name` attribute is invalid")
+		return false
+	}
+	if _, ok := enumDef.ItemNameIndex[name]; ok {
+		this.printNodeError(protoDef, node,
+			"`item` node `name` attribute duplicated")
+		return false
+	}
 
 	return true
 }
