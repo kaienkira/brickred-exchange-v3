@@ -214,6 +214,16 @@ func (this *ProtocolParser) parseProtocol(
 		}
 	}
 
+	// parse structs
+	{
+		nodes := xmlquery.Find(rootNode, "/struct")
+		for _, node := range nodes {
+			if this.addStructDef(protoDef, node) == false {
+				return nil
+			}
+		}
+	}
+
 	return protoDef
 }
 
@@ -408,10 +418,177 @@ func (this *ProtocolParser) addEnumItemDef(
 		def.Type = EnumDefItemType_Int
 		def.IntValue = utilAtoi(value)
 	} else {
+		parts := strings.Split(value, ".")
+		partsLen := len(parts)
+		if partsLen == 1 {
+			// current enum
+			refDefName := parts[0]
+			refDef, ok := enumDef.ItemNameIndex[refDefName]
+			if ok == false {
+				this.printNodeError(protoDef, node,
+					"enum item `%s` is undefined", refDefName)
+				return false
+			}
+			def.Type = EnumDefItemType_CurrentEnumRef
+			def.IntValue = refDef.IntValue
+			def.RefEnumItemDef = refDef
+
+		} else if partsLen == 2 {
+			// other enum in same file
+			refEnumDefName := parts[0]
+			refDefName := parts[1]
+
+			refEnumDef, ok := protoDef.EnumNameIndex[refEnumDefName]
+			if ok == false {
+				this.printNodeError(protoDef, node,
+					"enum `%s` is undefined", refEnumDefName)
+				return false
+			}
+			refDef, ok := refEnumDef.ItemNameIndex[refDefName]
+			if ok == false {
+				this.printNodeError(protoDef, node,
+					"enum item `%s.%s` is undefined",
+					refEnumDefName, refDefName)
+				return false
+			}
+			def.Type = EnumDefItemType_OtherEnumRef
+			def.IntValue = refDef.IntValue
+			def.RefEnumItemDef = refDef
+
+		} else if partsLen == 3 {
+			// other enum in other file
+			refProtoDefName := parts[0]
+			refEnumDefName := parts[1]
+			refDefName := parts[2]
+
+			refProtoDef, ok := this.Descriptor.ImportedProtos[refProtoDefName]
+			if ok == false {
+				this.printNodeError(protoDef, node,
+					"protocol `%s` is undefined", refProtoDefName)
+				return false
+			}
+			refEnumDef, ok := refProtoDef.EnumNameIndex[refEnumDefName]
+			if ok == false {
+				this.printNodeError(protoDef, node,
+					"enum `%s.%s` is undefined",
+					refProtoDefName, refEnumDefName)
+				return false
+			}
+			refDef, ok := refEnumDef.ItemNameIndex[refDefName]
+			if ok == false {
+				this.printNodeError(protoDef, node,
+					"enum item `%s.%s.%s` is undefined",
+					refProtoDefName, refEnumDefName, refDefName)
+				return false
+			}
+			def.Type = EnumDefItemType_OtherEnumRef
+			def.IntValue = refDef.IntValue
+			def.RefEnumItemDef = refDef
+
+		} else {
+			this.printNodeError(protoDef, node,
+				"enum value `%s` is invalid", value)
+			return false
+		}
 	}
 
 	enumDef.Items = append(enumDef.Items, def)
 	enumDef.ItemNameIndex[def.Name] = def
+
+	return true
+}
+
+func (this *ProtocolParser) addStructDef(
+	protoDef *ProtocolDef, node *xmlquery.Node) bool {
+
+	// check name attr
+	var name string
+	{
+		attr := this.getNodeAttr(node, "name")
+		if attr == nil {
+			this.printNodeError(protoDef, node,
+				"`struct` node must contain a `name` attribute")
+			return false
+		}
+		name = attr.Value
+	}
+	if utilIsStrValidVarName(name) == false {
+		this.printNodeError(protoDef, node,
+			"`struct` node `name` attribute is invalid")
+		return false
+	}
+	{
+		ok := false
+		if _, ok = protoDef.StructNameIndex[name]; ok == false {
+			if _, ok = protoDef.EnumNameIndex[name]; ok == false {
+				_, ok = protoDef.EnumMapNameIndex[name]
+			}
+		}
+		if ok {
+			this.printNodeError(protoDef, node,
+				"`struct` node `name` attribute duplicated")
+			return false
+		}
+	}
+
+	def := new(StructDef)
+	def.ParentRef = protoDef
+	def.Name = name
+	def.LineNumber = node.LineNumber
+	def.Fields = make([]*StructFieldDef, 0)
+	def.FieldNameIndex = make(map[string]*StructFieldDef)
+
+	// parse fields
+	for _, childNode := range node.ChildNodes() {
+		if childNode.Type != xmlquery.ElementNode {
+			continue
+		}
+		if childNode.Data != "required" &&
+			childNode.Data != "optional" {
+			this.printNodeError(protoDef, childNode,
+				"expect a `required` or `optional` node")
+			return false
+		}
+
+		if this.addStructFieldDef(protoDef, def, childNode) == false {
+			return false
+		}
+	}
+
+	if def.OptionalFieldCount > 0 {
+		def.OptionalByteCount = (def.OptionalFieldCount-1)/8 + 1
+	}
+
+	protoDef.Structs = append(protoDef.Structs, def)
+	protoDef.StructNameIndex[def.Name] = def
+
+	return true
+}
+
+func (this *ProtocolParser) addStructFieldDef(
+	protoDef *ProtocolDef, structDef *StructDef, node *xmlquery.Node) bool {
+
+	// check name attr
+	var name string
+	{
+		attr := this.getNodeAttr(node, "name")
+		if attr == nil {
+			this.printNodeError(protoDef, node,
+				"`%s` node must contain a `name` attribute", node.Data)
+			return false
+		}
+		name = attr.Value
+	}
+	if utilIsStrValidVarName(name) == false {
+		this.printNodeError(protoDef, node,
+			"`%s` node `name` attribute is invalid", node.Data)
+		return false
+	}
+	if _, ok := structDef.FieldNameIndex[name]; ok {
+		this.printNodeError(protoDef, node,
+			"`%s` node `name` attribute duplicated", node.Data)
+		return false
+	}
 
 	return true
 }
