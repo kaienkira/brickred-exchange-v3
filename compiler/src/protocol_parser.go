@@ -275,7 +275,7 @@ func (this *ProtocolParser) addNamespaceDef(
 	// check namespace parts
 	namespaceParts := strings.Split(namespaceStr, ".")
 	for _, part := range namespaceParts {
-		if utilIsValidVarName(part) == false {
+		if utilIsStrValidVarName(part) == false {
 			this.printNodeError(protoDef, node,
 				"`namespace` node value is invalid")
 			return false
@@ -308,7 +308,7 @@ func (this *ProtocolParser) addEnumDef(
 		}
 		name = attr.Value
 	}
-	if utilIsValidVarName(name) == false {
+	if utilIsStrValidVarName(name) == false {
 		this.printNodeError(protoDef, node,
 			"`enum` node `name` attribute is invalid")
 		return false
@@ -349,7 +349,7 @@ func (this *ProtocolParser) addEnumDef(
 	}
 
 	protoDef.Enums = append(protoDef.Enums, def)
-	protoDef.EnumNameIndex[name] = def
+	protoDef.EnumNameIndex[def.Name] = def
 
 	return true
 }
@@ -368,7 +368,7 @@ func (this *ProtocolParser) addEnumItemDef(
 		}
 		name = attr.Value
 	}
-	if utilIsValidVarName(name) == false {
+	if utilIsStrValidVarName(name) == false {
 		this.printNodeError(protoDef, node,
 			"`item` node `name` attribute is invalid")
 		return false
@@ -378,6 +378,38 @@ func (this *ProtocolParser) addEnumItemDef(
 			"`item` node `name` attribute duplicated")
 		return false
 	}
+
+	// check value attr
+	value := ""
+	{
+		attr := this.getNodeAttr(node, "value")
+		if attr != nil {
+			value = attr.Value
+		}
+	}
+
+	def := new(EnumItemDef)
+	def.ParentRef = enumDef
+	def.Name = name
+	def.LineNumber = node.LineNumber
+
+	if value == "" {
+		// default
+		def.Type = EnumDefItemType_Default
+		if len(enumDef.Items) == 0 {
+			def.IntValue = 0
+		} else {
+			def.IntValue = enumDef.Items[len(enumDef.Items)-1].IntValue + 1
+		}
+	} else if utilIsStrNumber(value) {
+		// int
+		def.Type = EnumDefItemType_Int
+		def.IntValue = utilAtoi(value)
+	} else {
+	}
+
+	enumDef.Items = append(enumDef.Items, def)
+	enumDef.ItemNameIndex[def.Name] = def
 
 	return true
 }
