@@ -331,6 +331,8 @@ func (this *ProtocolParser) addEnumDef(
 	def.ParentRef = protoDef
 	def.Name = name
 	def.LineNumber = node.LineNumber
+	def.Items = make([]*EnumItemDef, 0)
+	def.ItemNameIndex = make(map[string]*EnumItemDef)
 
 	// parse items
 	for _, childNode := range node.ChildNodes() {
