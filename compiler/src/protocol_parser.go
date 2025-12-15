@@ -237,6 +237,16 @@ func (this *ProtocolParser) parseProtocol(
 		}
 	}
 
+	// parse enum maps
+	{
+		nodes := xmlquery.Find(rootNode, "/enum_map")
+		for _, node := range nodes {
+			if this.addEnumMapDef(protoDef, node) == false {
+				return nil
+			}
+		}
+	}
+
 	return protoDef
 }
 
@@ -420,15 +430,16 @@ func (this *ProtocolParser) addEnumItemDef(
 
 	if value == "" {
 		// default
-		def.Type = EnumDefItemType_Default
+		def.Type = EnumItemType_Default
 		if len(enumDef.Items) == 0 {
 			def.IntValue = 0
 		} else {
-			def.IntValue = enumDef.Items[len(enumDef.Items)-1].IntValue + 1
+			def.IntValue =
+				enumDef.Items[len(enumDef.Items)-1].IntValue + 1
 		}
 	} else if this.isStrNumber(value) {
 		// int
-		def.Type = EnumDefItemType_Int
+		def.Type = EnumItemType_Int
 		def.IntValue = utilAtoi(value)
 	} else {
 		parts := strings.Split(value, ".")
@@ -442,7 +453,7 @@ func (this *ProtocolParser) addEnumItemDef(
 					"enum item `%s` is undefined", refDefName)
 				return false
 			}
-			def.Type = EnumDefItemType_CurrentEnumRef
+			def.Type = EnumItemType_CurrentEnumRef
 			def.IntValue = refDef.IntValue
 			def.RefEnumItemDef = refDef
 
@@ -464,7 +475,7 @@ func (this *ProtocolParser) addEnumItemDef(
 					refEnumDefName, refDefName)
 				return false
 			}
-			def.Type = EnumDefItemType_OtherEnumRef
+			def.Type = EnumItemType_OtherEnumRef
 			def.IntValue = refDef.IntValue
 			def.RefEnumItemDef = refDef
 
@@ -494,7 +505,7 @@ func (this *ProtocolParser) addEnumItemDef(
 					refProtoDefName, refEnumDefName, refDefName)
 				return false
 			}
-			def.Type = EnumDefItemType_OtherEnumRef
+			def.Type = EnumItemType_OtherEnumRef
 			def.IntValue = refDef.IntValue
 			def.RefEnumItemDef = refDef
 
@@ -723,6 +734,212 @@ func (this *ProtocolParser) addStructFieldDef(
 
 	structDef.Fields = append(structDef.Fields, def)
 	structDef.FieldNameIndex[def.Name] = def
+
+	return true
+}
+
+func (this *ProtocolParser) addEnumMapDef(
+	protoDef *ProtocolDef, node *xmlquery.Node) bool {
+
+	// check name attr
+	var name string
+	{
+		attr := this.getNodeAttr(node, "name")
+		if attr == nil {
+			this.printNodeError(protoDef, node,
+				"`enum_map` node must contain a `name` attribute")
+			return false
+		}
+		name = attr.Value
+	}
+	if this.isStrValidVarName(name) == false {
+		this.printNodeError(protoDef, node,
+			"`enum_map` node `name` attribute is invalid")
+		return false
+	}
+	{
+		ok := false
+		if _, ok = protoDef.EnumMapNameIndex[name]; ok == false {
+			if _, ok = protoDef.EnumNameIndex[name]; ok == false {
+				_, ok = protoDef.StructNameIndex[name]
+			}
+		}
+		if ok {
+			this.printNodeError(protoDef, node,
+				"`enum_map` node `name` attribute duplicated")
+			return false
+		}
+	}
+
+	def := new(EnumMapDef)
+	def.ParentRef = protoDef
+	def.Name = name
+	def.LineNumber = node.LineNumber
+	def.Items = make([]*EnumMapItemDef, 0)
+	def.ItemNameIndex = make(map[string]*EnumMapItemDef)
+	def.IdToStructIndex = make(map[int]*StructDef)
+	def.StructToIdIndex = make(map[*StructDef]int)
+
+	// parse items
+	for _, childNode := range node.ChildNodes() {
+		if childNode.Type != xmlquery.ElementNode {
+			continue
+		}
+		if childNode.Data != "item" {
+			this.printNodeError(protoDef, childNode,
+				"expect a `item` node")
+			return false
+		}
+
+		if this.addEnumMapItemDef(protoDef, def, childNode) == false {
+			return false
+		}
+	}
+
+	protoDef.EnumMaps = append(protoDef.EnumMaps, def)
+	protoDef.EnumMapNameIndex[def.Name] = def
+
+	return true
+}
+
+func (this *ProtocolParser) addEnumMapItemDef(
+	protoDef *ProtocolDef, enumMapDef *EnumMapDef, node *xmlquery.Node) bool {
+
+	// check name attr
+	var name string
+	{
+		attr := this.getNodeAttr(node, "name")
+		if attr == nil {
+			this.printNodeError(protoDef, node,
+				"`item` node must contain a `name` attribute")
+			return false
+		}
+		name = attr.Value
+	}
+	if this.isStrValidVarName(name) == false {
+		this.printNodeError(protoDef, node,
+			"`item` node `name` attribute is invalid")
+		return false
+	}
+	if _, ok := enumMapDef.ItemNameIndex[name]; ok {
+		this.printNodeError(protoDef, node,
+			"`item` node `name` attribute duplicated")
+		return false
+	}
+
+	// check value attr
+	value := ""
+	{
+		attr := this.getNodeAttr(node, "value")
+		if attr != nil {
+			value = attr.Value
+		}
+	}
+
+	// check struct attr
+	structValue := ""
+	{
+		attr := this.getNodeAttr(node, "struct")
+		if attr != nil {
+			structValue = attr.Value
+		}
+	}
+
+	def := new(EnumMapItemDef)
+	def.ParentRef = enumMapDef
+	def.Name = name
+	def.LineNumber = node.LineNumber
+
+	if value == "" {
+		// default
+		def.Type = EnumMapItemType_Default
+		if len(enumMapDef.Items) == 0 {
+			def.IntValue = 0
+		} else {
+			def.IntValue =
+				enumMapDef.Items[len(enumMapDef.Items)-1].IntValue + 1
+		}
+	} else if this.isStrNumber(value) {
+		// int
+		def.Type = EnumMapItemType_Int
+		def.IntValue = utilAtoi(value)
+	} else {
+		// current enum
+		refDef, ok := enumMapDef.ItemNameIndex[value]
+		if ok == false {
+			this.printNodeError(protoDef, node,
+				"enum_map item `%s` is undefined", value)
+			return false
+		}
+		def.Type = EnumMapItemType_CurrentEnumRef
+		def.IntValue = refDef.IntValue
+		def.RefEnumItemDef = refDef
+	}
+
+	if len(enumMapDef.Items) > 0 &&
+		def.IntValue < enumMapDef.Items[len(enumMapDef.Items)-1].IntValue {
+		this.printNodeError(protoDef, node,
+			"`item` node `value` attribute can not be "+
+				"less than previous one")
+		return false
+	}
+
+	if structValue != "" {
+		var refProtoDef *ProtocolDef = nil
+		refDefName := ""
+
+		parts := strings.Split(structValue, ".")
+		partsLen := len(parts)
+
+		if partsLen == 1 {
+			// in same file
+			refProtoDef = protoDef
+			refDefName = parts[0]
+
+		} else if partsLen == 2 {
+			// in other file
+			refProtoDefName := parts[0]
+			ok := false
+			refProtoDef, ok = this.Descriptor.ImportedProtos[refProtoDefName]
+			if ok == false {
+				this.printNodeError(protoDef, node,
+					"protocol `%s` is undefined", refProtoDefName)
+				return false
+			}
+			refDefName = parts[1]
+
+		} else {
+			this.printNodeError(protoDef, node,
+				"struct `%s` is invalid", structValue)
+			return false
+		}
+
+		refStructDef, ok := refProtoDef.StructNameIndex[refDefName]
+		if ok == false {
+			this.printNodeError(protoDef, node,
+				"struct `%s` is undefined", refDefName)
+			return false
+		}
+
+		def.RefStructDef = refStructDef
+
+		if _, ok := enumMapDef.IdToStructIndex[def.IntValue]; ok {
+			this.printNodeError(protoDef, node,
+				"id `%d` is already mapped to a struct", def.IntValue)
+			return false
+		}
+		if _, ok := enumMapDef.StructToIdIndex[def.RefStructDef]; ok {
+			this.printNodeError(protoDef, node,
+				"struct `%s` is already mapped to a id", def.RefStructDef.Name)
+			return false
+		}
+
+		enumMapDef.IdToStructIndex[def.IntValue] = def.RefStructDef
+		enumMapDef.StructToIdIndex[def.RefStructDef] = def.IntValue
+	}
+
+	enumMapDef.Items = append(enumMapDef.Items, def)
+	enumMapDef.ItemNameIndex[def.Name] = def
 
 	return true
 }

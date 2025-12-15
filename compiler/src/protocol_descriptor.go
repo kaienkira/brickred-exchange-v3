@@ -88,14 +88,14 @@ type EnumDef struct {
 	ItemNameIndex map[string]*EnumItemDef
 }
 
-type EnumDefItemType int
+type EnumItemType int
 
 const (
-	EnumDefItemType_None EnumDefItemType = iota
-	EnumDefItemType_Default
-	EnumDefItemType_Int
-	EnumDefItemType_CurrentEnumRef
-	EnumDefItemType_OtherEnumRef
+	EnumItemType_None EnumItemType = iota
+	EnumItemType_Default
+	EnumItemType_Int
+	EnumItemType_CurrentEnumRef
+	EnumItemType_OtherEnumRef
 )
 
 type EnumItemDef struct {
@@ -106,7 +106,7 @@ type EnumItemDef struct {
 	// define in line number
 	LineNumber int
 
-	Type           EnumDefItemType
+	Type           EnumItemType
 	IntValue       int
 	RefEnumItemDef *EnumItemDef
 }
@@ -210,5 +210,5 @@ type EnumMapItemDef struct {
 	Type           EnumMapItemType
 	IntValue       int
 	RefEnumItemDef *EnumMapItemDef
-	RefStructDef   StructDef
+	RefStructDef   *StructDef
 }
