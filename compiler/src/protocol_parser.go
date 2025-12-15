@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
 )
+
+var g_varNameRegexp *regexp.Regexp = regexp.MustCompile(`^[a-zA-Z_]\w*$`)
+var g_numberRegexp *regexp.Regexp = regexp.MustCompile(`^(-)?[0-9]+$`)
+var g_listTypeRegexp *regexp.Regexp = regexp.MustCompile(`^list{(.+)}$`)
 
 type ProtocolParser struct {
 	Descriptor *ProtocolDescriptor
@@ -26,6 +31,14 @@ func (this *ProtocolParser) Parse(
 	}
 
 	return true
+}
+
+func (this *ProtocolParser) isStrValidVarName(str string) bool {
+	return g_varNameRegexp.MatchString(str)
+}
+
+func (this *ProtocolParser) isStrNumber(str string) bool {
+	return g_numberRegexp.MatchString(str)
 }
 
 func (this *ProtocolParser) printLineError(
@@ -285,7 +298,7 @@ func (this *ProtocolParser) addNamespaceDef(
 	// check namespace parts
 	namespaceParts := strings.Split(namespaceStr, ".")
 	for _, part := range namespaceParts {
-		if utilIsStrValidVarName(part) == false {
+		if this.isStrValidVarName(part) == false {
 			this.printNodeError(protoDef, node,
 				"`namespace` node value is invalid")
 			return false
@@ -318,7 +331,7 @@ func (this *ProtocolParser) addEnumDef(
 		}
 		name = attr.Value
 	}
-	if utilIsStrValidVarName(name) == false {
+	if this.isStrValidVarName(name) == false {
 		this.printNodeError(protoDef, node,
 			"`enum` node `name` attribute is invalid")
 		return false
@@ -380,7 +393,7 @@ func (this *ProtocolParser) addEnumItemDef(
 		}
 		name = attr.Value
 	}
-	if utilIsStrValidVarName(name) == false {
+	if this.isStrValidVarName(name) == false {
 		this.printNodeError(protoDef, node,
 			"`item` node `name` attribute is invalid")
 		return false
@@ -413,7 +426,7 @@ func (this *ProtocolParser) addEnumItemDef(
 		} else {
 			def.IntValue = enumDef.Items[len(enumDef.Items)-1].IntValue + 1
 		}
-	} else if utilIsStrNumber(value) {
+	} else if this.isStrNumber(value) {
 		// int
 		def.Type = EnumDefItemType_Int
 		def.IntValue = utilAtoi(value)
@@ -512,7 +525,7 @@ func (this *ProtocolParser) addStructDef(
 		}
 		name = attr.Value
 	}
-	if utilIsStrValidVarName(name) == false {
+	if this.isStrValidVarName(name) == false {
 		this.printNodeError(protoDef, node,
 			"`struct` node `name` attribute is invalid")
 		return false
@@ -579,7 +592,7 @@ func (this *ProtocolParser) addStructFieldDef(
 		}
 		name = attr.Value
 	}
-	if utilIsStrValidVarName(name) == false {
+	if this.isStrValidVarName(name) == false {
 		this.printNodeError(protoDef, node,
 			"`%s` node `name` attribute is invalid", node.Data)
 		return false
@@ -589,6 +602,127 @@ func (this *ProtocolParser) addStructFieldDef(
 			"`%s` node `name` attribute duplicated", node.Data)
 		return false
 	}
+
+	// check type attr
+	var typ string
+	{
+		attr := this.getNodeAttr(node, "type")
+		if attr == nil {
+			this.printNodeError(protoDef, node,
+				"`%s` node must contain a `type` attribute", node.Data)
+			return false
+		}
+		typ = attr.Value
+	}
+
+	def := new(StructFieldDef)
+	def.ParentRef = structDef
+	def.Name = name
+	def.LineNumber = node.LineNumber
+
+	// get type info
+	fieldTypeStr := typ
+	{
+		m := g_listTypeRegexp.FindStringSubmatch(fieldTypeStr)
+		if m != nil {
+			fieldTypeStr = m[1]
+			def.Type = StructFieldType_List
+		}
+	}
+
+	fieldType := StructFieldType_None
+	if fieldTypeStr == "i8" {
+		fieldType = StructFieldType_I8
+	} else if fieldTypeStr == "u8" {
+		fieldType = StructFieldType_U8
+	} else if fieldTypeStr == "i16" {
+		fieldType = StructFieldType_I16
+	} else if fieldTypeStr == "u16" {
+		fieldType = StructFieldType_U16
+	} else if fieldTypeStr == "i32" {
+		fieldType = StructFieldType_I32
+	} else if fieldTypeStr == "u32" {
+		fieldType = StructFieldType_U32
+	} else if fieldTypeStr == "i64" {
+		fieldType = StructFieldType_I64
+	} else if fieldTypeStr == "u64" {
+		fieldType = StructFieldType_U64
+	} else if fieldTypeStr == "i16v" {
+		fieldType = StructFieldType_I16V
+	} else if fieldTypeStr == "u16v" {
+		fieldType = StructFieldType_U16V
+	} else if fieldTypeStr == "i32v" {
+		fieldType = StructFieldType_I32V
+	} else if fieldTypeStr == "u32v" {
+		fieldType = StructFieldType_U32V
+	} else if fieldTypeStr == "i64v" {
+		fieldType = StructFieldType_I64V
+	} else if fieldTypeStr == "u64v" {
+		fieldType = StructFieldType_U64V
+	} else if fieldTypeStr == "string" {
+		fieldType = StructFieldType_String
+	} else if fieldTypeStr == "bytes" {
+		fieldType = StructFieldType_Bytes
+	} else if fieldTypeStr == "bool" {
+		fieldType = StructFieldType_Bool
+	} else {
+		var refProtoDef *ProtocolDef = nil
+		refDefName := ""
+
+		parts := strings.Split(fieldTypeStr, ".")
+		partsLen := len(parts)
+
+		if partsLen == 1 {
+			// in same file
+			refProtoDef = protoDef
+			refDefName = parts[0]
+
+		} else if partsLen == 2 {
+			// in other file
+			refProtoDefName := parts[0]
+			ok := false
+			refProtoDef, ok = this.Descriptor.ImportedProtos[refProtoDefName]
+			if ok == false {
+				this.printNodeError(protoDef, node,
+					"protocol `%s` is undefined", refProtoDefName)
+				return false
+			}
+			refDefName = parts[1]
+
+		} else {
+			this.printNodeError(protoDef, node,
+				"type `%s` is invalid", fieldTypeStr)
+			return false
+		}
+
+		if refEnumDef, ok := refProtoDef.EnumNameIndex[refDefName]; ok {
+			fieldType = StructFieldType_Enum
+			def.RefEnumDef = refEnumDef
+		} else if refStructDef, ok := refProtoDef.StructNameIndex[refDefName]; ok {
+			fieldType = StructFieldType_Struct
+			def.RefStructDef = refStructDef
+		} else {
+			this.printNodeError(protoDef, node,
+				"type `%s` is undefined", refDefName)
+			return false
+		}
+	}
+
+	if def.Type == StructFieldType_List {
+		def.ListType = fieldType
+	} else {
+		def.Type = fieldType
+	}
+
+	// optional
+	if node.Data == "optional" {
+		def.IsOptional = true
+		def.OptionalFieldIndex = structDef.OptionalFieldCount
+		structDef.OptionalFieldCount++
+	}
+
+	structDef.Fields = append(structDef.Fields, def)
+	structDef.FieldNameIndex[def.Name] = def
 
 	return true
 }

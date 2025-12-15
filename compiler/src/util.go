@@ -3,7 +3,6 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 )
@@ -17,7 +16,6 @@ func utilAtoi(str string) int {
 	}
 }
 
-// ----------------------------------------------------------------------------
 func utilGetFileNameWithoutExtension(filePath string) string {
 	base := filepath.Base(filePath)
 	ext := filepath.Ext(base)
@@ -59,16 +57,4 @@ func utilCheckDirExists(dirPath string) bool {
 	}
 
 	return true
-}
-
-// ----------------------------------------------------------------------------
-var varNameRegexp *regexp.Regexp = regexp.MustCompile(`^[a-zA-Z_]\w*$`)
-var numberRegexp *regexp.Regexp = regexp.MustCompile(`^(-)?[0-9]+$`)
-
-func utilIsStrValidVarName(str string) bool {
-	return varNameRegexp.MatchString(str)
-}
-
-func utilIsStrNumber(str string) bool {
-	return numberRegexp.MatchString(str)
 }
