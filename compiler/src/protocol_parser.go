@@ -247,6 +247,8 @@ func (this *ProtocolParser) parseProtocol(
 		}
 	}
 
+	this.processImportedProtocols(protoDef)
+
 	return protoDef
 }
 
@@ -942,4 +944,76 @@ func (this *ProtocolParser) addEnumMapItemDef(
 	enumMapDef.ItemNameIndex[def.Name] = def
 
 	return true
+}
+
+func (this *ProtocolParser) processImportedProtocols(
+	protoDef *ProtocolDef) {
+
+	usedProtos := make(map[string]*ProtocolDef)
+	enumRefProtos := make(map[string]*ProtocolDef)
+	structRefProtos := make(map[string]*ProtocolDef)
+	enumMapRefProtos := make(map[string]*ProtocolDef)
+
+	// collect enum ref protocols
+	for _, enumDef := range protoDef.Enums {
+		for _, def := range enumDef.Items {
+			if def.RefEnumItemDef != nil {
+				refProtoDef := def.RefEnumItemDef.ParentRef.ParentRef
+				usedProtos[refProtoDef.Name] = refProtoDef
+				enumRefProtos[refProtoDef.Name] = refProtoDef
+			}
+		}
+	}
+
+	// collect struct ref protocols
+	for _, structDef := range protoDef.Structs {
+		for _, def := range structDef.Fields {
+			if def.RefEnumDef != nil {
+				refProtoDef := def.RefEnumDef.ParentRef
+				usedProtos[refProtoDef.Name] = refProtoDef
+				structRefProtos[refProtoDef.Name] = refProtoDef
+			}
+			if def.RefStructDef != nil {
+				refProtoDef := def.RefStructDef.ParentRef
+				usedProtos[refProtoDef.Name] = refProtoDef
+				structRefProtos[refProtoDef.Name] = refProtoDef
+			}
+		}
+	}
+
+	// collect enum map ref protocols
+	for _, enumMapDef := range protoDef.EnumMaps {
+		for _, def := range enumMapDef.Items {
+			if def.RefEnumItemDef != nil {
+				refProtoDef := def.RefEnumItemDef.ParentRef.ParentRef
+				usedProtos[refProtoDef.Name] = refProtoDef
+			}
+			if def.RefStructDef != nil {
+				refProtoDef := def.RefStructDef.ParentRef
+				usedProtos[refProtoDef.Name] = refProtoDef
+				enumMapRefProtos[refProtoDef.Name] = refProtoDef
+			}
+		}
+	}
+
+	for _, importDef := range protoDef.Imports {
+		protoName := importDef.ProtoDef.Name
+
+		// check imported protocol is used
+		if _, ok := usedProtos[protoName]; ok == false {
+			fmt.Fprintf(os.Stderr,
+				"warning:%s:%d: protocol `%s` is not used but imported",
+				protoDef.FilePath, importDef.LineNumber, importDef.Name)
+		}
+
+		if _, ok := enumRefProtos[protoName]; ok {
+			importDef.IsRefByEnum = true
+		}
+		if _, ok := structRefProtos[protoName]; ok {
+			importDef.IsRefByStruct = true
+		}
+		if _, ok := enumMapRefProtos[protoName]; ok {
+			importDef.IsRefByEnumMap = true
+		}
+	}
 }
