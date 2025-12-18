@@ -91,6 +91,7 @@ func main() {
 	if parser.Parse(optProtoFilePath, optSearchPath) == false {
 		os.Exit(1)
 	}
+	defer parser.Close()
 
 	os.Exit(0)
 }

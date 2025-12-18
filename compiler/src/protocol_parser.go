@@ -18,14 +18,19 @@ type ProtocolParser struct {
 	Descriptor *ProtocolDescriptor
 }
 
+func (this *ProtocolParser) Close() {
+	if this.Descriptor != nil {
+		this.Descriptor.Close()
+		this.Descriptor = nil
+	}
+}
+
 func (this *ProtocolParser) Parse(
 	protoFilePath string, protoSearchPath []string) bool {
 
-	this.Descriptor = new(ProtocolDescriptor)
-	this.Descriptor.ImportedProtos = make(map[string]*ProtocolDef)
+	this.Descriptor = NewProtocolDescriptor()
 	this.Descriptor.ProtoDef =
 		this.parseProtocol(protoFilePath, protoSearchPath)
-
 	if this.Descriptor.ProtoDef == nil {
 		return false
 	}
@@ -148,18 +153,7 @@ func (this *ProtocolParser) parseProtocol(
 		return nil
 	}
 
-	protoDef = new(ProtocolDef)
-	protoDef.Name = protoName
-	protoDef.FilePath = protoFileFullPath
-	protoDef.Imports = make([]*ImportDef, 0)
-	protoDef.ImportNameIndex = make(map[string]*ImportDef)
-	protoDef.Namespaces = make(map[string]*NamespaceDef)
-	protoDef.Enums = make([]*EnumDef, 0)
-	protoDef.EnumNameIndex = make(map[string]*EnumDef)
-	protoDef.Structs = make([]*StructDef, 0)
-	protoDef.StructNameIndex = make(map[string]*StructDef)
-	protoDef.EnumMaps = make([]*EnumMapDef, 0)
-	protoDef.EnumMapNameIndex = make(map[string]*EnumMapDef)
+	protoDef = NewProtocolDef(protoName, protoFileFullPath)
 
 	// add to imported cache first to prevent circular import
 	this.Descriptor.ImportedProtos[protoName] = protoDef
@@ -262,10 +256,7 @@ func (this *ProtocolParser) addImportDef(
 		return false
 	}
 
-	def := new(ImportDef)
-	def.ParentRef = protoDef
-	def.Name = externalProtoDef.Name
-	def.LineNumber = node.LineNumber
+	def := NewImportDef(protoDef, externalProtoDef.Name, node.LineNumber)
 	def.ProtoDef = externalProtoDef
 
 	protoDef.Imports = append(protoDef.Imports, def)
@@ -317,10 +308,7 @@ func (this *ProtocolParser) addNamespaceDef(
 		}
 	}
 
-	def := new(NamespaceDef)
-	def.ParentRef = protoDef
-	def.Language = lang
-	def.LineNumber = node.LineNumber
+	def := NewNamespaceDef(protoDef, lang, node.LineNumber)
 	def.Namespace = namespaceStr
 	def.NamespaceParts = namespaceParts
 
@@ -362,12 +350,7 @@ func (this *ProtocolParser) addEnumDef(
 		}
 	}
 
-	def := new(EnumDef)
-	def.ParentRef = protoDef
-	def.Name = name
-	def.LineNumber = node.LineNumber
-	def.Items = make([]*EnumItemDef, 0)
-	def.ItemNameIndex = make(map[string]*EnumItemDef)
+	def := NewEnumDef(protoDef, name, node.LineNumber)
 
 	// parse items
 	for _, childNode := range node.ChildNodes() {
@@ -425,10 +408,7 @@ func (this *ProtocolParser) addEnumItemDef(
 		}
 	}
 
-	def := new(EnumItemDef)
-	def.ParentRef = enumDef
-	def.Name = name
-	def.LineNumber = node.LineNumber
+	def := NewEnumItemDef(enumDef, name, node.LineNumber)
 
 	if value == "" {
 		// default
@@ -557,12 +537,7 @@ func (this *ProtocolParser) addStructDef(
 		}
 	}
 
-	def := new(StructDef)
-	def.ParentRef = protoDef
-	def.Name = name
-	def.LineNumber = node.LineNumber
-	def.Fields = make([]*StructFieldDef, 0)
-	def.FieldNameIndex = make(map[string]*StructFieldDef)
+	def := NewStructDef(protoDef, name, node.LineNumber)
 
 	// parse fields
 	for _, childNode := range node.ChildNodes() {
@@ -628,10 +603,7 @@ func (this *ProtocolParser) addStructFieldDef(
 		typ = attr.Value
 	}
 
-	def := new(StructFieldDef)
-	def.ParentRef = structDef
-	def.Name = name
-	def.LineNumber = node.LineNumber
+	def := NewStructFieldDef(structDef, name, node.LineNumber)
 
 	// get type info
 	fieldTypeStr := typ
@@ -773,14 +745,7 @@ func (this *ProtocolParser) addEnumMapDef(
 		}
 	}
 
-	def := new(EnumMapDef)
-	def.ParentRef = protoDef
-	def.Name = name
-	def.LineNumber = node.LineNumber
-	def.Items = make([]*EnumMapItemDef, 0)
-	def.ItemNameIndex = make(map[string]*EnumMapItemDef)
-	def.IdToStructIndex = make(map[int]*StructDef)
-	def.StructToIdIndex = make(map[*StructDef]int)
+	def := NewEnumMapDef(protoDef, name, node.LineNumber)
 
 	// parse items
 	for _, childNode := range node.ChildNodes() {
@@ -847,10 +812,7 @@ func (this *ProtocolParser) addEnumMapItemDef(
 		}
 	}
 
-	def := new(EnumMapItemDef)
-	def.ParentRef = enumMapDef
-	def.Name = name
-	def.LineNumber = node.LineNumber
+	def := NewEnumMapItemDef(enumMapDef, name, node.LineNumber)
 
 	if value == "" {
 		// default
