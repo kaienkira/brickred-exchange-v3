@@ -87,11 +87,31 @@ func main() {
 		os.Exit(1)
 	}
 
+	// create parser
 	parser := new(ProtocolParser)
 	if parser.Parse(optProtoFilePath, optSearchPath) == false {
 		os.Exit(1)
 	}
 	defer parser.Close()
+
+	// create generator
+	var generator CodeGenerator = nil
+	if optLanguage == "cpp" {
+		generator = NewCppCodeGenerator()
+	} else {
+		os.Exit(1)
+	}
+	defer generator.Close()
+
+	// generate code
+	newLineType := NewLineType_Unix
+	if optNewLineType == "dos" {
+		newLineType = NewLineType_Dos
+	}
+	if generator.Generate(parser.Descriptor,
+		optOutputDir, newLineType) == false {
+		os.Exit(1)
+	}
 
 	os.Exit(0)
 }

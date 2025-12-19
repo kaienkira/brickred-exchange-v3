@@ -8,7 +8,8 @@ const (
 	NewLineType_Dos
 )
 
-type BaseCodeGenerator interface {
-	Generate(descriptor *ProtocolDescriptor, newLineType NewLineType) bool
+type CodeGenerator interface {
 	Close()
+	Generate(descriptor *ProtocolDescriptor,
+		outputDir string, newLineType NewLineType) bool
 }

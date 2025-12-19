@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -53,6 +54,18 @@ func utilCheckDirExists(dirPath string) bool {
 		return false
 	}
 	if info.IsDir() == false {
+		return false
+	}
+
+	return true
+}
+
+func utilWriteAllText(filePath string, fileContent string) bool {
+	err := os.WriteFile(filePath, []byte(fileContent), 0644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr,
+			"error: write file %s failed: %s",
+			filePath, err.Error())
 		return false
 	}
 
