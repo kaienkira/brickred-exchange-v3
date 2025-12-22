@@ -4,15 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/antchfx/xmlquery"
 )
-
-var g_varNameRegexp *regexp.Regexp = regexp.MustCompile(`^[a-zA-Z_]\w*$`)
-var g_numberRegexp *regexp.Regexp = regexp.MustCompile(`^(-)?[0-9]+$`)
-var g_listTypeRegexp *regexp.Regexp = regexp.MustCompile(`^list{(.+)}$`)
 
 type ProtocolParser struct {
 	Descriptor *ProtocolDescriptor
@@ -39,11 +34,11 @@ func (this *ProtocolParser) Parse(
 }
 
 func (this *ProtocolParser) isStrValidVarName(str string) bool {
-	return g_varNameRegexp.MatchString(str)
+	return g_isVarNameRegexp.MatchString(str)
 }
 
 func (this *ProtocolParser) isStrNumber(str string) bool {
-	return g_numberRegexp.MatchString(str)
+	return g_isNumberRegexp.MatchString(str)
 }
 
 func (this *ProtocolParser) printLineError(
@@ -608,7 +603,7 @@ func (this *ProtocolParser) addStructFieldDef(
 	// get type info
 	fieldTypeStr := typ
 	{
-		m := g_listTypeRegexp.FindStringSubmatch(fieldTypeStr)
+		m := g_fetchListTypeRegexp.FindStringSubmatch(fieldTypeStr)
 		if m != nil {
 			fieldTypeStr = m[1]
 			def.Type = StructFieldType_List
