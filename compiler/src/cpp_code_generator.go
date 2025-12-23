@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 )
 
@@ -49,7 +50,6 @@ func (this *CppCodeGenerator) Generate(
 	return true
 }
 
-// short for write line
 func (this *CppCodeGenerator) writeLine(
 	sb *strings.Builder, line string) {
 
@@ -74,10 +74,13 @@ func (this *CppCodeGenerator) generateHeaderFile() string {
 	var sb strings.Builder
 
 	this.writeDontEditComment(&sb)
-	this.writeHeaderFileIncludeGuardBegin(&sb)
+	this.writeHeaderFileIncludeGuardStart(&sb)
+	this.writeHeaderFileIncludeFileDecl(&sb)
+	this.writeHeaderFileClassForwardDecl(&sb)
 	this.writeNamespaceDeclStart(&sb)
 	this.writeEmptyLine(&sb)
 	this.writeNamespaceDeclEnd(&sb)
+	this.writeHeaderFileIncludeGuardEnd(&sb)
 
 	return sb.String()
 }
@@ -106,8 +109,9 @@ func (this *CppCodeGenerator) writeNamespaceDeclStart(
 	if ok == false {
 		return
 	}
-
 	namespaceName := strings.Join(namespaceDef.NamespaceParts, "::")
+
+	this.writeEmptyLine(sb)
 	this.writeLineFormat(sb, "namespace %s {", namespaceName)
 }
 
@@ -118,29 +122,178 @@ func (this *CppCodeGenerator) writeNamespaceDeclEnd(
 	if ok == false {
 		return
 	}
-
 	namespaceName := strings.Join(namespaceDef.NamespaceParts, "::")
+
 	this.writeLineFormat(sb, "} // namespace %s", namespaceName)
 }
 
-func (this *CppCodeGenerator) writeHeaderFileIncludeGuardBegin(
+func (this *CppCodeGenerator) writeHeaderFileIncludeGuardStart(
 	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
 
 	guardNameParts := make([]string, 0)
 	guardNameParts = append(guardNameParts, "BRICKRED_EXCHANGE_GENERATED")
-
-	namespaceDef, ok := this.descriptor.ProtoDef.Namespaces["cpp"]
+	namespaceDef, ok := protoDef.Namespaces["cpp"]
 	if ok {
 		guardNameParts = append(
 			guardNameParts, namespaceDef.NamespaceParts...)
 	}
 	guardNameParts = append(guardNameParts,
-		g_notWordRegexp.ReplaceAllString(
-			this.descriptor.ProtoDef.Name, "_"))
+		g_notWordRegexp.ReplaceAllString(protoDef.Name, "_"))
 	guardNameParts = append(guardNameParts, "H")
-
 	guardName := strings.ToUpper(strings.Join(guardNameParts, "_"))
 
 	this.writeLineFormat(sb, "#ifndef %s", guardName)
 	this.writeLineFormat(sb, "#define %s", guardName)
+}
+
+func (this *CppCodeGenerator) writeHeaderFileIncludeGuardEnd(
+	sb *strings.Builder) {
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb, "#endif")
+}
+
+func (this *CppCodeGenerator) writeHeaderFileIncludeFileDecl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+	useCStdDefH := false
+	useCStdIntH := false
+	useStringH := false
+	useVectorH := false
+	useBrickredBaseStructH := false
+	useOtherProtoH := false
+
+	if len(protoDef.Structs) > 0 {
+		useCStdDefH = true
+		useBrickredBaseStructH = true
+	}
+	if len(protoDef.EnumMaps) > 0 {
+		useBrickredBaseStructH = true
+	}
+
+	for _, structDef := range protoDef.Structs {
+		for _, fieldDef := range structDef.Fields {
+			if fieldDef.IsOptional {
+				useCStdIntH = true
+			}
+
+			checkType := StructFieldType_None
+			if fieldDef.Type == StructFieldType_List {
+				checkType = fieldDef.ListType
+				useVectorH = true
+			} else {
+				checkType = fieldDef.Type
+			}
+
+			if checkType == StructFieldType_I8 ||
+				checkType == StructFieldType_U8 ||
+				checkType == StructFieldType_I16 ||
+				checkType == StructFieldType_U16 ||
+				checkType == StructFieldType_I32 ||
+				checkType == StructFieldType_U32 ||
+				checkType == StructFieldType_I64 ||
+				checkType == StructFieldType_U64 ||
+				checkType == StructFieldType_I16V ||
+				checkType == StructFieldType_U16V ||
+				checkType == StructFieldType_I32V ||
+				checkType == StructFieldType_U32V ||
+				checkType == StructFieldType_I64V ||
+				checkType == StructFieldType_U64V {
+				useCStdIntH = true
+			} else if checkType == StructFieldType_String ||
+				checkType == StructFieldType_Bytes {
+				useStringH = true
+			}
+		}
+	}
+
+	for _, importDef := range protoDef.Imports {
+		if importDef.IsRefByStruct == false &&
+			importDef.IsRefByEnumMap {
+			continue
+		} else {
+			useOtherProtoH = true
+			break
+		}
+	}
+
+	if useCStdDefH == false &&
+		useCStdIntH == false &&
+		useStringH == false &&
+		useVectorH == false &&
+		useBrickredBaseStructH == false {
+		return
+	}
+
+	if useCStdDefH || useCStdIntH || useStringH || useVectorH {
+		this.writeEmptyLine(sb)
+	}
+	if useCStdDefH {
+		this.writeLine(sb, "#include <cstddef>")
+	}
+	if useCStdIntH {
+		this.writeLine(sb, "#include <cstdint>")
+	}
+	if useStringH {
+		this.writeLine(sb, "#include <string>")
+	}
+	if useVectorH {
+		this.writeLine(sb, "#include <vector>")
+	}
+
+	if useBrickredBaseStructH || useOtherProtoH {
+		this.writeEmptyLine(sb)
+	}
+	if useBrickredBaseStructH {
+		this.writeLine(sb, "#include <brickred/exchange/base_struct.h>")
+	}
+	for _, importDef := range protoDef.Imports {
+		if importDef.IsRefByStruct == false &&
+			importDef.IsRefByEnumMap {
+			continue
+		}
+		this.writeLineFormat(sb, "#include \"%s.h\"",
+			importDef.ProtoDef.Name)
+	}
+}
+
+func (this *CppCodeGenerator) writeHeaderFileClassForwardDecl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	refStructDefs := make([]*StructDef, 0)
+	for _, enumMapDef := range protoDef.EnumMaps {
+		for _, enumMapItemDef := range enumMapDef.Items {
+			def := enumMapItemDef.RefStructDef
+			if def == nil {
+				continue
+			}
+			if def.ParentRef == protoDef {
+				continue
+			}
+			if slices.Contains(refStructDefs, def) {
+				continue
+			}
+			refStructDefs = append(refStructDefs, def)
+		}
+	}
+
+	if len(refStructDefs) > 0 {
+		this.writeEmptyLine(sb)
+	}
+	for _, refStructDef := range refStructDefs {
+		refProtoDef := refStructDef.ParentRef
+		refNamespaceDef, ok := refProtoDef.Namespaces["cpp"]
+		if ok && len(refNamespaceDef.NamespaceParts) > 0 {
+			this.writeLineFormat(sb, "namespace %s { class %s; }",
+				strings.Join(refNamespaceDef.NamespaceParts, "::"),
+				refStructDef.Name)
+		} else {
+			this.writeLineFormat(sb, "class %s;", refStructDef.Name)
+		}
+	}
 }
