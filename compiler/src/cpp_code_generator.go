@@ -181,6 +181,7 @@ func (this *CppCodeGenerator) generateHeaderFile() string {
 	this.writeNamespaceDeclStart(&sb)
 	this.writeHeaderFileEnumDecl(&sb)
 	this.writeHeaderFileStructDecl(&sb)
+	this.writeHeaderFileEnumMapDecl(&sb)
 	this.writeNamespaceDeclEnd(&sb)
 	this.writeHeaderFileIncludeGuardEnd(&sb)
 
@@ -440,9 +441,9 @@ func (this *CppCodeGenerator) writeHeaderFileOneEnumDecl(
 	this.writeLineFormat(sb,
 		"struct %s {",
 		enumDef.Name)
+
 	this.writeLine(sb,
 		"    enum type {")
-
 	for _, def := range enumDef.Items {
 		if def.Type == EnumItemType_Default {
 			this.writeLineFormat(sb,
@@ -463,9 +464,9 @@ func (this *CppCodeGenerator) writeHeaderFileOneEnumDecl(
 				this.getEnumItemFullQualifiedName(def.RefEnumItemDef))
 		}
 	}
-
 	this.writeLine(sb,
 		"    };")
+
 	this.writeLine(sb,
 		"};")
 }
@@ -581,4 +582,46 @@ func (this *CppCodeGenerator) writeHeaderFileOneStructDeclFieldDecl(
 			"    %s %s;",
 			cppType, def.Name)
 	}
+}
+
+func (this *CppCodeGenerator) writeHeaderFileEnumMapDecl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	for _, def := range protoDef.EnumMaps {
+		this.writeHeaderFileOneEnumMapDecl(sb, def)
+	}
+}
+
+func (this *CppCodeGenerator) writeHeaderFileOneEnumMapDecl(
+	sb *strings.Builder, enumMapDef *EnumMapDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"struct %s {",
+		enumMapDef.Name)
+
+	this.writeLine(sb,
+		"    enum type {")
+	for _, def := range enumMapDef.Items {
+		if def.Type == EnumMapItemType_Default {
+			this.writeLineFormat(sb,
+				"        %s,",
+				def.Name)
+		} else if def.Type == EnumMapItemType_Int {
+			this.writeLineFormat(sb,
+				"        %s = %d,",
+				def.Name, def.IntValue)
+		} else if def.Type == EnumMapItemType_CurrentEnumRef {
+			this.writeLineFormat(sb,
+				"        %s = %s,",
+				def.Name, def.RefEnumItemDef.Name)
+		}
+	}
+	this.writeLine(sb,
+		"    };")
+
+	this.writeLine(sb,
+		"};")
 }
