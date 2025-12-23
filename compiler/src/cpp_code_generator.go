@@ -70,6 +70,22 @@ func (this *CppCodeGenerator) writeEmptyLine(
 	sb.WriteString(this.newLineStr)
 }
 
+func (this *CppCodeGenerator) getEnumItemFullQualifiedName(
+	enumItemDef *EnumItemDef) string {
+
+	enumDef := enumItemDef.ParentRef
+	protoDef := enumDef.ParentRef
+	namespaceDef, ok := protoDef.Namespaces["cpp"]
+	if ok && len(namespaceDef.NamespaceParts) > 0 {
+		return fmt.Sprintf("%s::%s::%s",
+			strings.Join(namespaceDef.NamespaceParts, "::"),
+			enumDef.Name,
+			enumItemDef.Name)
+	} else {
+		return ""
+	}
+}
+
 func (this *CppCodeGenerator) generateHeaderFile() string {
 	var sb strings.Builder
 
@@ -78,7 +94,7 @@ func (this *CppCodeGenerator) generateHeaderFile() string {
 	this.writeHeaderFileIncludeFileDecl(&sb)
 	this.writeHeaderFileClassForwardDecl(&sb)
 	this.writeNamespaceDeclStart(&sb)
-	this.writeEmptyLine(&sb)
+	this.writeHeaderFileEnumDecl(&sb)
 	this.writeNamespaceDeclEnd(&sb)
 	this.writeHeaderFileIncludeGuardEnd(&sb)
 
@@ -124,6 +140,7 @@ func (this *CppCodeGenerator) writeNamespaceDeclEnd(
 	}
 	namespaceName := strings.Join(namespaceDef.NamespaceParts, "::")
 
+	this.writeEmptyLine(sb)
 	this.writeLineFormat(sb, "} // namespace %s", namespaceName)
 }
 
@@ -296,4 +313,40 @@ func (this *CppCodeGenerator) writeHeaderFileClassForwardDecl(
 			this.writeLineFormat(sb, "class %s;", refStructDef.Name)
 		}
 	}
+}
+
+func (this *CppCodeGenerator) writeHeaderFileEnumDecl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	for _, def := range protoDef.Enums {
+		this.writeHeaderFileOneEnumDecl(sb, def)
+	}
+}
+
+func (this *CppCodeGenerator) writeHeaderFileOneEnumDecl(
+	sb *strings.Builder, enumDef *EnumDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb, "enum class %s {", enumDef.Name)
+
+	for _, def := range enumDef.Items {
+		if def.Type == EnumItemType_Default {
+			this.writeLineFormat(sb, "    %s,",
+				def.Name)
+		} else if def.Type == EnumItemType_Int {
+			this.writeLineFormat(sb, "    %s = %d,",
+				def.Name, def.IntValue)
+		} else if def.Type == EnumItemType_CurrentEnumRef {
+			this.writeLineFormat(sb, "    %s = %s,",
+				def.Name, def.RefEnumItemDef.Name)
+		} else if def.Type == EnumItemType_OtherEnumRef {
+			this.writeLineFormat(sb, "    %s = (int)%s,",
+				def.Name,
+				this.getEnumItemFullQualifiedName(def.RefEnumItemDef))
+		}
+	}
+
+	this.writeLine(sb, "};")
 }
