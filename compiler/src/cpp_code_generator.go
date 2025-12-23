@@ -159,7 +159,7 @@ func (this *CppCodeGenerator) getStructFieldCppType(
 	} else if checkType == StructFieldType_Bool {
 		cppType = "bool"
 	} else if checkType == StructFieldType_Enum {
-		cppType = this.getEnumFullQualifiedName(fieldDef.RefEnumDef)
+		cppType = this.getEnumFullQualifiedName(fieldDef.RefEnumDef) + "::type"
 	} else if checkType == StructFieldType_Struct {
 		cppType = this.getStructFullQualifiedName(fieldDef.RefStructDef)
 	}
@@ -438,30 +438,34 @@ func (this *CppCodeGenerator) writeHeaderFileOneEnumDecl(
 
 	this.writeEmptyLine(sb)
 	this.writeLineFormat(sb,
-		"enum class %s {",
+		"struct %s {",
 		enumDef.Name)
+	this.writeLine(sb,
+		"    enum type {")
 
 	for _, def := range enumDef.Items {
 		if def.Type == EnumItemType_Default {
 			this.writeLineFormat(sb,
-				"    %s,",
+				"        %s,",
 				def.Name)
 		} else if def.Type == EnumItemType_Int {
 			this.writeLineFormat(sb,
-				"    %s = %d,",
+				"        %s = %d,",
 				def.Name, def.IntValue)
 		} else if def.Type == EnumItemType_CurrentEnumRef {
 			this.writeLineFormat(sb,
-				"    %s = %s,",
+				"        %s = %s,",
 				def.Name, def.RefEnumItemDef.Name)
 		} else if def.Type == EnumItemType_OtherEnumRef {
 			this.writeLineFormat(sb,
-				"    %s = (int)%s,",
+				"        %s = %s,",
 				def.Name,
 				this.getEnumItemFullQualifiedName(def.RefEnumItemDef))
 		}
 	}
 
+	this.writeLine(sb,
+		"    };")
 	this.writeLine(sb,
 		"};")
 }
