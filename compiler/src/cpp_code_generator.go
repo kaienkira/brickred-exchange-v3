@@ -70,6 +70,21 @@ func (this *CppCodeGenerator) writeEmptyLine(
 	sb.WriteString(this.newLineStr)
 }
 
+func (this *CppCodeGenerator) getEnumFullQualifiedName(
+	enumDef *EnumDef) string {
+
+	protoDef := enumDef.ParentRef
+	namespaceDef, ok := protoDef.Namespaces["cpp"]
+	if ok && len(namespaceDef.NamespaceParts) > 0 {
+		return fmt.Sprintf(
+			"%s::%s",
+			strings.Join(namespaceDef.NamespaceParts, "::"),
+			enumDef.Name)
+	} else {
+		return enumDef.Name
+	}
+}
+
 func (this *CppCodeGenerator) getEnumItemFullQualifiedName(
 	enumItemDef *EnumItemDef) string {
 
@@ -77,12 +92,82 @@ func (this *CppCodeGenerator) getEnumItemFullQualifiedName(
 	protoDef := enumDef.ParentRef
 	namespaceDef, ok := protoDef.Namespaces["cpp"]
 	if ok && len(namespaceDef.NamespaceParts) > 0 {
-		return fmt.Sprintf("%s::%s::%s",
+		return fmt.Sprintf(
+			"%s::%s::%s",
 			strings.Join(namespaceDef.NamespaceParts, "::"),
 			enumDef.Name,
 			enumItemDef.Name)
 	} else {
-		return ""
+		return fmt.Sprintf(
+			"%s::%s",
+			enumDef.Name,
+			enumItemDef.Name)
+	}
+}
+
+func (this *CppCodeGenerator) getStructFullQualifiedName(
+	structDef *StructDef) string {
+
+	protoDef := structDef.ParentRef
+	namespaceDef, ok := protoDef.Namespaces["cpp"]
+	if ok && len(namespaceDef.NamespaceParts) > 0 {
+		return fmt.Sprintf(
+			"%s::%s",
+			strings.Join(namespaceDef.NamespaceParts, "::"),
+			structDef.Name)
+	} else {
+		return structDef.Name
+	}
+}
+
+func (this *CppCodeGenerator) getStructFieldCppType(
+	fieldDef *StructFieldDef) string {
+
+	checkType := StructFieldType_None
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	cppType := ""
+	if checkType == StructFieldType_I8 {
+		cppType = "int8_t"
+	} else if checkType == StructFieldType_U8 {
+		cppType = "uint8_t"
+	} else if checkType == StructFieldType_I16 ||
+		checkType == StructFieldType_I16V {
+		cppType = "int16_t"
+	} else if checkType == StructFieldType_U16 ||
+		checkType == StructFieldType_U16V {
+		cppType = "uint16_t"
+	} else if checkType == StructFieldType_I32 ||
+		checkType == StructFieldType_I32V {
+		cppType = "int32_t"
+	} else if checkType == StructFieldType_U32 ||
+		checkType == StructFieldType_U32V {
+		cppType = "uint32_t"
+	} else if checkType == StructFieldType_I64 ||
+		checkType == StructFieldType_I64V {
+		cppType = "int64_t"
+	} else if checkType == StructFieldType_U64 ||
+		checkType == StructFieldType_U64V {
+		cppType = "uint64_t"
+	} else if checkType == StructFieldType_String ||
+		checkType == StructFieldType_Bytes {
+		cppType = "std::string"
+	} else if checkType == StructFieldType_Bool {
+		cppType = "bool"
+	} else if checkType == StructFieldType_Enum {
+		cppType = this.getEnumFullQualifiedName(fieldDef.RefEnumDef)
+	} else if checkType == StructFieldType_Struct {
+		cppType = this.getStructFullQualifiedName(fieldDef.RefStructDef)
+	}
+
+	if fieldDef.Type == StructFieldType_List {
+		return fmt.Sprintf("std::vector<%s>", cppType)
+	} else {
+		return cppType
 	}
 }
 
@@ -422,6 +507,74 @@ func (this *CppCodeGenerator) writeHeaderFileOneStructDecl(
 		"    int decode(const char *buffer, size_t size) override;")
 	this.writeLine(sb,
 		"    std::string dump() const override;")
+	this.writeHeaderFileOneStructDeclOptionalFuncDecl(sb, structDef)
+	this.writeHeaderFileOneStructDeclFieldDecl(sb, structDef)
 	this.writeLine(sb,
 		"};")
+}
+
+func (this *CppCodeGenerator) writeHeaderFileOneStructDeclOptionalFuncDecl(
+	sb *strings.Builder, structDef *StructDef) {
+
+	if structDef.OptionalFieldCount <= 0 {
+		return
+	}
+
+	for _, def := range structDef.Fields {
+		if def.IsOptional == false {
+			continue
+		}
+
+		byteIndex := def.OptionalFieldIndex / 8
+		byteMask := fmt.Sprintf("0x%02x", 1<<(def.OptionalFieldIndex%8))
+		cppType := this.getStructFieldCppType(def)
+		if def.Type == StructFieldType_String ||
+			def.Type == StructFieldType_Bytes ||
+			def.Type == StructFieldType_List ||
+			def.Type == StructFieldType_Struct {
+			cppType = fmt.Sprintf("const %s &", cppType)
+		} else {
+			cppType = fmt.Sprintf("%s ", cppType)
+		}
+
+		this.writeEmptyLine(sb)
+		this.writeLineFormat(sb,
+			"    bool has_%s() const { return _has_bits_[%d] & %s; }",
+			def.Name, byteIndex, byteMask)
+		this.writeLineFormat(sb,
+			"    void set_has_%s() { _has_bits_[%d] |= %s; }",
+			def.Name, byteIndex, byteMask)
+		this.writeLineFormat(sb,
+			"    void clear_has_%s() { _has_bits_[%d] &= ~%s; }",
+			def.Name, byteIndex, byteMask)
+		this.writeLineFormat(sb,
+			"    void set_%s(%svalue) { set_has_%s(); this->%s = value; }",
+			def.Name, cppType, def.Name, def.Name)
+	}
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"private:")
+	this.writeLineFormat(sb,
+		"    uint8_t _has_bits_[%d];",
+		structDef.OptionalByteCount)
+}
+
+func (this *CppCodeGenerator) writeHeaderFileOneStructDeclFieldDecl(
+	sb *strings.Builder, structDef *StructDef) {
+
+	if len(structDef.Fields) <= 0 {
+		return
+	}
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"public:")
+
+	for _, def := range structDef.Fields {
+		cppType := this.getStructFieldCppType(def)
+		this.writeLineFormat(sb,
+			"    %s %s;",
+			cppType, def.Name)
+	}
 }
