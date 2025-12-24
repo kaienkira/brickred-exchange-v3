@@ -441,9 +441,9 @@ func (this *CppCodeGenerator) writeHeaderFileOneEnumDecl(
 	this.writeLineFormat(sb,
 		"struct %s {",
 		enumDef.Name)
-
 	this.writeLine(sb,
 		"    enum type {")
+
 	for _, def := range enumDef.Items {
 		if def.Type == EnumItemType_Default {
 			this.writeLineFormat(sb,
@@ -464,9 +464,9 @@ func (this *CppCodeGenerator) writeHeaderFileOneEnumDecl(
 				this.getEnumItemFullQualifiedName(def.RefEnumItemDef))
 		}
 	}
+
 	this.writeLine(sb,
 		"    };")
-
 	this.writeLine(sb,
 		"};")
 }
@@ -601,9 +601,9 @@ func (this *CppCodeGenerator) writeHeaderFileOneEnumMapDecl(
 	this.writeLineFormat(sb,
 		"struct %s {",
 		enumMapDef.Name)
-
 	this.writeLine(sb,
 		"    enum type {")
+
 	for _, def := range enumMapDef.Items {
 		if def.Type == EnumMapItemType_Default {
 			this.writeLineFormat(sb,
@@ -619,9 +619,47 @@ func (this *CppCodeGenerator) writeHeaderFileOneEnumMapDecl(
 				def.Name, def.RefEnumItemDef.Name)
 		}
 	}
-	this.writeLine(sb,
-		"    };")
 
 	this.writeLine(sb,
+		"    };")
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    template <class T>")
+	this.writeLine(sb,
+		"    struct id;")
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    static brickred::exchange::BaseStruct *create(int id);")
+	this.writeLine(sb,
 		"};")
+
+	this.writeHeaderFileOneEnumMapDeclIdTemplateDecl(sb, enumMapDef)
+}
+
+func (this *CppCodeGenerator) writeHeaderFileOneEnumMapDeclIdTemplateDecl(
+	sb *strings.Builder, enumMapDef *EnumMapDef) {
+
+	if len(enumMapDef.IdToStructIndex) <= 0 {
+		return
+	}
+
+	this.writeEmptyLine(sb)
+
+	for _, def := range enumMapDef.Items {
+		if def.RefStructDef == nil {
+			continue
+		}
+
+		this.writeLine(sb,
+			"template <>")
+		this.writeLineFormat(sb,
+			"struct %s::id<%s> {",
+			enumMapDef.Name,
+			this.getStructFullQualifiedName(def.RefStructDef))
+		this.writeLineFormat(sb,
+			"    static constexpr int value = %s;",
+			def.Name)
+		this.writeLine(sb,
+			"};")
+	}
 }

@@ -837,9 +837,9 @@ func (this *ProtocolParser) addEnumMapItemDef(
 
 	if len(enumMapDef.Items) > 0 &&
 		def.IntValue < enumMapDef.Items[len(enumMapDef.Items)-1].IntValue {
-		this.printNodeError(protoDef, node,
+		this.printNodeError(protoDef, node, ""+
 			"`item` node `value` attribute can not be "+
-				"less than previous one")
+			"less than previous one")
 		return false
 	}
 
