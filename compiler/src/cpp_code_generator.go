@@ -192,6 +192,9 @@ func (this *CppCodeGenerator) generateSourceFile() string {
 	var sb strings.Builder
 
 	this.writeDontEditComment(&sb)
+	this.writeSourceFileIncludeFileDecl(&sb)
+	this.writeNamespaceDeclStart(&sb)
+	this.writeNamespaceDeclEnd(&sb)
 
 	return sb.String()
 }
@@ -331,10 +334,9 @@ func (this *CppCodeGenerator) writeHeaderFileIncludeFileDecl(
 		if importDef.IsRefByStruct == false &&
 			importDef.IsRefByEnumMap {
 			continue
-		} else {
-			useOtherProtoH = true
-			break
 		}
+		useOtherProtoH = true
+		break
 	}
 
 	if useCStdDefH == false &&
@@ -661,5 +663,97 @@ func (this *CppCodeGenerator) writeHeaderFileOneEnumMapDeclIdTemplateDecl(
 			def.Name)
 		this.writeLine(sb,
 			"};")
+	}
+}
+
+func (this *CppCodeGenerator) writeSourceFileIncludeFileDecl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+	useCStringH := false
+	useAlgorithmH := false
+	useSStreamH := false
+	useBrickredMacroInternalH := false
+	useOtherProtoH := false
+
+	if len(protoDef.EnumMaps) > 0 {
+		// for std::lower_bound() in EnumMap::create()
+		useAlgorithmH = true
+	}
+
+	for _, structDef := range protoDef.Structs {
+		if structDef.OptionalFieldCount > 0 {
+			// for memset(_has_bits_)
+			useCStringH = true
+			// for std::swap(_has_bits_)
+			useAlgorithmH = true
+		}
+
+		if len(structDef.Fields) > 0 {
+			useSStreamH = true
+			useBrickredMacroInternalH = true
+		}
+
+		for _, def := range structDef.Fields {
+			if def.Type != StructFieldType_List &&
+				def.Type != StructFieldType_Struct {
+				// for std::swap(field)
+				useAlgorithmH = true
+			}
+		}
+	}
+
+	for _, importDef := range protoDef.Imports {
+		if (importDef.IsRefByStruct == false &&
+			importDef.IsRefByEnumMap) == false {
+			continue
+		} else {
+			useOtherProtoH = true
+			break
+		}
+	}
+
+	if useCStringH == false &&
+		useAlgorithmH == false &&
+		useSStreamH == false &&
+		useBrickredMacroInternalH == false {
+		return
+	}
+
+	this.writeLineFormat(sb,
+		"#include \"%s.h\"",
+		protoDef.Name)
+
+	if useCStringH || useAlgorithmH || useSStreamH {
+		this.writeEmptyLine(sb)
+	}
+	if useCStringH {
+		this.writeLine(sb,
+			"#include <cstring>")
+	}
+	if useAlgorithmH {
+		this.writeLine(sb,
+			"#include <algorithm>")
+	}
+	if useSStreamH {
+		this.writeLine(sb,
+			"#include <sstream>")
+	}
+
+	if useBrickredMacroInternalH || useOtherProtoH {
+		this.writeEmptyLine(sb)
+	}
+	if useBrickredMacroInternalH {
+		this.writeLine(sb,
+			"#include <brickred/exchange/macro_internal.h>")
+	}
+	for _, importDef := range protoDef.Imports {
+		if (importDef.IsRefByStruct == false &&
+			importDef.IsRefByEnumMap) == false {
+			continue
+		}
+		this.writeLineFormat(sb,
+			"#include \"%s.h\"",
+			importDef.ProtoDef.Name)
 	}
 }
