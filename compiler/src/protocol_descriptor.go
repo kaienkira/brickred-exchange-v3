@@ -308,6 +308,10 @@ const (
 	StructFieldType_List
 )
 
+func StructFieldTypeIsInteger(t StructFieldType) bool {
+	return t >= StructFieldType_I8 && t <= StructFieldType_U64V
+}
+
 // ----------------------------------------------------------------------------
 type StructFieldDef struct {
 	// link to parent define

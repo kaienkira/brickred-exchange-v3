@@ -159,7 +159,7 @@ func (this *CppCodeGenerator) getStructFieldCppType(
 	} else if checkType == StructFieldType_Bool {
 		cppType = "bool"
 	} else if checkType == StructFieldType_Enum {
-		cppType = this.getEnumFullQualifiedName(fieldDef.RefEnumDef) + "::type"
+		cppType = this.getEnumFullQualifiedName(fieldDef.RefEnumDef)
 	} else if checkType == StructFieldType_Struct {
 		cppType = this.getStructFullQualifiedName(fieldDef.RefStructDef)
 	}
@@ -194,6 +194,7 @@ func (this *CppCodeGenerator) generateSourceFile() string {
 	this.writeDontEditComment(&sb)
 	this.writeSourceFileIncludeFileDecl(&sb)
 	this.writeNamespaceDeclStart(&sb)
+	this.writeSourceFileStructImpl(&sb)
 	this.writeNamespaceDeclEnd(&sb)
 
 	return sb.String()
@@ -308,20 +309,7 @@ func (this *CppCodeGenerator) writeHeaderFileIncludeFileDecl(
 				checkType = fieldDef.Type
 			}
 
-			if checkType == StructFieldType_I8 ||
-				checkType == StructFieldType_U8 ||
-				checkType == StructFieldType_I16 ||
-				checkType == StructFieldType_U16 ||
-				checkType == StructFieldType_I32 ||
-				checkType == StructFieldType_U32 ||
-				checkType == StructFieldType_I64 ||
-				checkType == StructFieldType_U64 ||
-				checkType == StructFieldType_I16V ||
-				checkType == StructFieldType_U16V ||
-				checkType == StructFieldType_I32V ||
-				checkType == StructFieldType_U32V ||
-				checkType == StructFieldType_I64V ||
-				checkType == StructFieldType_U64V {
+			if StructFieldTypeIsInteger(checkType) {
 				useCStdIntH = true
 			} else if checkType == StructFieldType_String ||
 				checkType == StructFieldType_Bytes {
@@ -441,34 +429,30 @@ func (this *CppCodeGenerator) writeHeaderFileOneEnumDecl(
 
 	this.writeEmptyLine(sb)
 	this.writeLineFormat(sb,
-		"struct %s {",
+		"enum class %s {",
 		enumDef.Name)
-	this.writeLine(sb,
-		"    enum type {")
 
 	for _, def := range enumDef.Items {
 		if def.Type == EnumItemType_Default {
 			this.writeLineFormat(sb,
-				"        %s,",
+				"    %s,",
 				def.Name)
 		} else if def.Type == EnumItemType_Int {
 			this.writeLineFormat(sb,
-				"        %s = %d,",
+				"    %s = %d,",
 				def.Name, def.IntValue)
 		} else if def.Type == EnumItemType_CurrentEnumRef {
 			this.writeLineFormat(sb,
-				"        %s = %s,",
+				"    %s = %s,",
 				def.Name, def.RefEnumItemDef.Name)
 		} else if def.Type == EnumItemType_OtherEnumRef {
 			this.writeLineFormat(sb,
-				"        %s = %s,",
+				"    %s = (int)%s,",
 				def.Name,
 				this.getEnumItemFullQualifiedName(def.RefEnumItemDef))
 		}
 	}
 
-	this.writeLine(sb,
-		"    };")
 	this.writeLine(sb,
 		"};")
 }
@@ -756,4 +740,83 @@ func (this *CppCodeGenerator) writeSourceFileIncludeFileDecl(
 			"#include \"%s.h\"",
 			importDef.ProtoDef.Name)
 	}
+}
+
+func (this *CppCodeGenerator) writeSourceFileStructImpl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	for _, def := range protoDef.Structs {
+		this.writeSourceFileOneStructImpl(sb, def)
+	}
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneStructImpl(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeSourceFileOneStructImplConstructor(sb, structDef)
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneStructImplConstructor(
+	sb *strings.Builder, structDef *StructDef) {
+
+	hasInitList := false
+	lastInitListFieldIndex := -1
+	for i, def := range structDef.Fields {
+		if def.Type != StructFieldType_String &&
+			def.Type != StructFieldType_Bytes &&
+			def.Type != StructFieldType_List &&
+			def.Type != StructFieldType_Struct {
+			hasInitList = true
+			lastInitListFieldIndex = i
+		}
+	}
+
+	this.writeEmptyLine(sb)
+	if hasInitList {
+		this.writeLineFormat(sb,
+			"%s::%s() :",
+			structDef.Name, structDef.Name)
+	} else {
+		this.writeLineFormat(sb,
+			"%s::%s()",
+			structDef.Name, structDef.Name)
+	}
+
+	if hasInitList {
+		for i, def := range structDef.Fields {
+			var defaultValue string
+			if StructFieldTypeIsInteger(def.Type) {
+				defaultValue = "0"
+			} else if def.Type == StructFieldType_Bool {
+				defaultValue = "false"
+			} else if def.Type == StructFieldType_Enum {
+				if len(def.RefEnumDef.Items) > 0 {
+					defaultValue = this.getEnumItemFullQualifiedName(
+						def.RefEnumDef.Items[0])
+				} else {
+					defaultValue = fmt.Sprintf("(%s)0",
+						this.getEnumFullQualifiedName(def.RefEnumDef))
+				}
+			} else {
+				continue
+			}
+
+			if i == lastInitListFieldIndex {
+				this.writeLineFormat(sb,
+					"    %s(%s)",
+					def.Name, defaultValue)
+			} else {
+				this.writeLineFormat(sb,
+					"    %s(%s),",
+					def.Name, defaultValue)
+			}
+		}
+	}
+
+	this.writeLine(sb,
+		"{")
+	this.writeLine(sb,
+		"}")
 }
