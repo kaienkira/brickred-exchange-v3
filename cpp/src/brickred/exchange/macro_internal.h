@@ -188,7 +188,7 @@
         _var = (_enum_type)v;       \
     } while (0)                     \
 
-#define WRITE_ENUM(_var) WRITE_INT32V(_var)
+#define WRITE_ENUM(_var) WRITE_INT32V((int)_var)
 
 #define READ_LENGTH(_length)         \
     do {                             \

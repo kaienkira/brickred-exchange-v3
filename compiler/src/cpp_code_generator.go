@@ -123,7 +123,7 @@ func (this *CppCodeGenerator) getStructFullQualifiedName(
 func (this *CppCodeGenerator) getStructFieldCppType(
 	fieldDef *StructFieldDef) string {
 
-	checkType := StructFieldType_None
+	var checkType StructFieldType
 	if fieldDef.Type == StructFieldType_List {
 		checkType = fieldDef.ListType
 	} else {
@@ -301,7 +301,7 @@ func (this *CppCodeGenerator) writeHeaderFileIncludeFileDecl(
 				useCStdIntH = true
 			}
 
-			checkType := StructFieldType_None
+			var checkType StructFieldType
 			if fieldDef.Type == StructFieldType_List {
 				checkType = fieldDef.ListType
 				useVectorH = true
@@ -756,6 +756,9 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImpl(
 	sb *strings.Builder, structDef *StructDef) {
 
 	this.writeSourceFileOneStructImplConstructor(sb, structDef)
+	this.writeSourceFileOneStructImplDestructor(sb, structDef)
+	this.writeSourceFileOneStructImplSwapFunc(sb, structDef)
+	this.writeSourceFileOneStructImplEncodeFunc(sb, structDef)
 }
 
 func (this *CppCodeGenerator) writeSourceFileOneStructImplConstructor(
@@ -764,13 +767,14 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplConstructor(
 	hasInitList := false
 	lastInitListFieldIndex := -1
 	for i, def := range structDef.Fields {
-		if def.Type != StructFieldType_String &&
-			def.Type != StructFieldType_Bytes &&
-			def.Type != StructFieldType_List &&
-			def.Type != StructFieldType_Struct {
-			hasInitList = true
-			lastInitListFieldIndex = i
+		if def.Type == StructFieldType_String ||
+			def.Type == StructFieldType_Bytes ||
+			def.Type == StructFieldType_List ||
+			def.Type == StructFieldType_Struct {
+			continue
 		}
+		hasInitList = true
+		lastInitListFieldIndex = i
 	}
 
 	this.writeEmptyLine(sb)
@@ -817,6 +821,248 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplConstructor(
 
 	this.writeLine(sb,
 		"{")
+
+	if structDef.OptionalFieldCount > 0 {
+		this.writeLine(sb,
+			"    ::memset(_has_bits_, 0, sizeof(_has_bits_));")
+	}
+
 	this.writeLine(sb,
 		"}")
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneStructImplDestructor(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"%s::~%s()",
+		structDef.Name, structDef.Name)
+	this.writeLine(sb,
+		"{")
+	this.writeLine(sb,
+		"}")
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneStructImplSwapFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"void %s::swap(%s &other)",
+		structDef.Name, structDef.Name)
+	this.writeLine(sb,
+		"{")
+
+	if structDef.OptionalByteCount > 0 {
+		this.writeLineFormat(sb,
+			"    for (int i = 0; i < %d; ++i) {",
+			structDef.OptionalByteCount)
+		this.writeLine(sb,
+			"        std::swap(_has_bits_[i], other._has_bits_[i]);")
+		this.writeLine(sb,
+			"    }")
+		this.writeEmptyLine(sb)
+	}
+
+	for _, def := range structDef.Fields {
+		if def.Type == StructFieldType_String ||
+			def.Type == StructFieldType_Bytes ||
+			def.Type == StructFieldType_List ||
+			def.Type == StructFieldType_Struct {
+			this.writeLineFormat(sb,
+				"    this->%s.swap(other.%s);",
+				def.Name, def.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"    std::swap(this->%s, other.%s);",
+				def.Name, def.Name)
+		}
+	}
+
+	this.writeLine(sb,
+		"}")
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneStructImplEncodeFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"int %s::encode(char *buffer, size_t size) const",
+		structDef.Name)
+	this.writeLine(sb,
+		"{")
+
+	if len(structDef.Fields) <= 0 {
+		this.writeLine(sb,
+			"    return 0;")
+	} else {
+		this.writeLine(sb,
+			"    char *p = buffer;")
+		this.writeLine(sb,
+			"    size_t left_bytes = size;")
+		this.writeEmptyLine(sb)
+
+		if structDef.OptionalByteCount > 0 {
+			this.writeLineFormat(sb,
+				"    for (int i = 0; i < %d; ++i) {",
+				structDef.OptionalByteCount)
+			this.writeLine(sb,
+				"        WRITE_INT8(_has_bits_[i]);")
+			this.writeLine(sb,
+				"    }")
+			this.writeEmptyLine(sb)
+		}
+
+		for _, def := range structDef.Fields {
+			this.writeSourceFileOneStructImplEncodeFuncWriteStatement(sb, def)
+		}
+
+		this.writeEmptyLine(sb)
+		this.writeLine(sb,
+			"    return size - left_bytes;")
+	}
+
+	this.writeLine(sb,
+		"}")
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneStructImplEncodeFuncWriteStatement(
+	sb *strings.Builder, fieldDef *StructFieldDef) {
+
+	var indent string
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"    if (has_%s()) {",
+			fieldDef.Name)
+		indent = "        "
+	} else {
+		indent = "    "
+	}
+
+	isList := fieldDef.Type == StructFieldType_List
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	if checkType == StructFieldType_I8 ||
+		checkType == StructFieldType_U8 ||
+		checkType == StructFieldType_Bool {
+		if isList {
+			this.writeLineFormat(sb,
+				"%sWRITE_LIST(this->%s, WRITE_INT8);",
+				indent, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%sWRITE_INT8(this->%s);",
+				indent, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_I16 ||
+		checkType == StructFieldType_U16 {
+		if isList {
+			this.writeLineFormat(sb,
+				"%sWRITE_LIST(this->%s, WRITE_INT16);",
+				indent, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%sWRITE_INT16(this->%s);",
+				indent, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_I32 ||
+		checkType == StructFieldType_U32 {
+		if isList {
+			this.writeLineFormat(sb,
+				"%sWRITE_LIST(this->%s, WRITE_INT32);",
+				indent, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%sWRITE_INT32(this->%s);",
+				indent, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_I64 ||
+		checkType == StructFieldType_U64 {
+		if isList {
+			this.writeLineFormat(sb,
+				"%sWRITE_LIST(this->%s, WRITE_INT64);",
+				indent, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%sWRITE_INT64(this->%s);",
+				indent, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_I16V ||
+		checkType == StructFieldType_U16V {
+		if isList {
+			this.writeLineFormat(sb,
+				"%sWRITE_LIST(this->%s, WRITE_INT16V);",
+				indent, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%sWRITE_INT16V(this->%s);",
+				indent, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_I32V ||
+		checkType == StructFieldType_U32V {
+		if isList {
+			this.writeLineFormat(sb,
+				"%sWRITE_LIST(this->%s, WRITE_INT32V);",
+				indent, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%sWRITE_INT32V(this->%s);",
+				indent, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_I64V ||
+		checkType == StructFieldType_U64V {
+		if isList {
+			this.writeLineFormat(sb,
+				"%sWRITE_LIST(this->%s, WRITE_INT64V);",
+				indent, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%sWRITE_INT64V(this->%s);",
+				indent, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_String ||
+		checkType == StructFieldType_Bytes {
+		if isList {
+			this.writeLineFormat(sb,
+				"%sWRITE_LIST(this->%s, WRITE_STRING);",
+				indent, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%sWRITE_STRING(this->%s);",
+				indent, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_Enum {
+		if isList {
+			this.writeLineFormat(sb,
+				"%sWRITE_LIST(this->%s, WRITE_ENUM);",
+				indent, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%sWRITE_ENUM(this->%s);",
+				indent, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_Struct {
+		if isList {
+			this.writeLineFormat(sb,
+				"%sWRITE_LIST(this->%s, WRITE_STRUCT);",
+				indent, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%sWRITE_STRUCT(this->%s);",
+				indent, fieldDef.Name)
+		}
+	}
+
+	if fieldDef.IsOptional {
+		this.writeLine(sb,
+			"    }")
+	}
 }
