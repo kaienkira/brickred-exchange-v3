@@ -760,6 +760,7 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImpl(
 	this.writeSourceFileOneStructImplSwapFunc(sb, structDef)
 	this.writeSourceFileOneStructImplEncodeFunc(sb, structDef)
 	this.writeSourceFileOneStructImplDecodeFunc(sb, structDef)
+	this.writeSourceFileOneStructImplDumpFunc(sb, structDef)
 }
 
 func (this *CppCodeGenerator) writeSourceFileOneStructImplConstructor(
@@ -1145,6 +1146,101 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplDecodeFuncReadStatemen
 				"%s%s(this->%s);",
 				indent, readFunc, fieldDef.Name)
 		}
+	}
+
+	if fieldDef.IsOptional {
+		this.writeLine(sb,
+			"    }")
+	}
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneStructImplDumpFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"std::string %s::dump() const",
+		structDef.Name)
+	this.writeLine(sb,
+		"{")
+
+	if len(structDef.Fields) <= 0 {
+		this.writeLine(sb,
+			"    return \"\";")
+	} else {
+		this.writeLine(sb,
+			"    std::stringstream ss;")
+		this.writeEmptyLine(sb)
+
+		for _, def := range structDef.Fields {
+			this.writeSourceFileOneStructImplDumpFuncWriteStatement(sb, def)
+		}
+
+		this.writeEmptyLine(sb)
+		this.writeLine(sb,
+			"    std::string s = ss.str();")
+		this.writeLine(sb,
+			"    if (s.empty() == false) {")
+		this.writeLine(sb,
+			"        s.erase(s.end() - 1);")
+		this.writeLine(sb,
+			"    }")
+		this.writeEmptyLine(sb)
+		this.writeLine(sb,
+			"    return s;")
+	}
+
+	this.writeLine(sb,
+		"}")
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneStructImplDumpFuncWriteStatement(
+	sb *strings.Builder, fieldDef *StructFieldDef) {
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"    if (has_%s()) {",
+			fieldDef.Name)
+	}
+
+	isList := fieldDef.Type == StructFieldType_List
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	var writeStatement string
+	if checkType == StructFieldType_I8 ||
+		checkType == StructFieldType_U8 {
+		if isList {
+			writeStatement = fmt.Sprintf(
+				"ss << \"%s: \" << (int)this->%s[i] << \" \"",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(
+				"ss << \"%s: \" << (int)this->%s << \" \"",
+				fieldDef.Name, fieldDef.Name)
+		}
+	}
+
+	var indent string
+	if fieldDef.IsOptional {
+		indent = "        "
+	} else {
+		indent = "    "
+	}
+	if isList {
+		this.writeLineFormat(sb,
+			"%sfor (size_t i = 0; i < this->%s.size(); ++i) {",
+			indent, fieldDef.Name)
+		this.writeLineFormat(sb,
+			"%s    %s;",
+			indent, writeStatement)
+		this.writeLineFormat(sb,
+			"%s}",
+			indent)
 	}
 
 	if fieldDef.IsOptional {
