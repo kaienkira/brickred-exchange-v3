@@ -30,6 +30,7 @@ func main() {
 	var optNewLineType string
 
 	flagSet := flag.NewFlagSet("main", flag.ContinueOnError)
+	flagSet.BoolP("help", "h", false, "")
 	flagSet.StringVarP(&optProtoFilePath, "-proto_file_path", "f", "", "")
 	flagSet.StringVarP(&optLanguage, "-language", "l", "", "")
 	flagSet.StringVarP(&optOutputDir, "-output_dir", "o", "", "")

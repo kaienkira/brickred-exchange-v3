@@ -759,6 +759,7 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImpl(
 	this.writeSourceFileOneStructImplDestructor(sb, structDef)
 	this.writeSourceFileOneStructImplSwapFunc(sb, structDef)
 	this.writeSourceFileOneStructImplEncodeFunc(sb, structDef)
+	this.writeSourceFileOneStructImplDecodeFunc(sb, structDef)
 }
 
 func (this *CppCodeGenerator) writeSourceFileOneStructImplConstructor(
@@ -931,15 +932,10 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplEncodeFunc(
 func (this *CppCodeGenerator) writeSourceFileOneStructImplEncodeFuncWriteStatement(
 	sb *strings.Builder, fieldDef *StructFieldDef) {
 
-	var indent string
-
 	if fieldDef.IsOptional {
 		this.writeLineFormat(sb,
 			"    if (has_%s()) {",
 			fieldDef.Name)
-		indent = "        "
-	} else {
-		indent = "    "
 	}
 
 	isList := fieldDef.Type == StructFieldType_List
@@ -950,114 +946,204 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplEncodeFuncWriteStateme
 		checkType = fieldDef.Type
 	}
 
+	var writeFunc string
 	if checkType == StructFieldType_I8 ||
 		checkType == StructFieldType_U8 ||
 		checkType == StructFieldType_Bool {
-		if isList {
-			this.writeLineFormat(sb,
-				"%sWRITE_LIST(this->%s, WRITE_INT8);",
-				indent, fieldDef.Name)
-		} else {
-			this.writeLineFormat(sb,
-				"%sWRITE_INT8(this->%s);",
-				indent, fieldDef.Name)
-		}
+		writeFunc = "WRITE_INT8"
 	} else if checkType == StructFieldType_I16 ||
 		checkType == StructFieldType_U16 {
-		if isList {
-			this.writeLineFormat(sb,
-				"%sWRITE_LIST(this->%s, WRITE_INT16);",
-				indent, fieldDef.Name)
-		} else {
-			this.writeLineFormat(sb,
-				"%sWRITE_INT16(this->%s);",
-				indent, fieldDef.Name)
-		}
+		writeFunc = "WRITE_INT16"
 	} else if checkType == StructFieldType_I32 ||
 		checkType == StructFieldType_U32 {
-		if isList {
-			this.writeLineFormat(sb,
-				"%sWRITE_LIST(this->%s, WRITE_INT32);",
-				indent, fieldDef.Name)
-		} else {
-			this.writeLineFormat(sb,
-				"%sWRITE_INT32(this->%s);",
-				indent, fieldDef.Name)
-		}
+		writeFunc = "WRITE_INT32"
 	} else if checkType == StructFieldType_I64 ||
 		checkType == StructFieldType_U64 {
-		if isList {
-			this.writeLineFormat(sb,
-				"%sWRITE_LIST(this->%s, WRITE_INT64);",
-				indent, fieldDef.Name)
-		} else {
-			this.writeLineFormat(sb,
-				"%sWRITE_INT64(this->%s);",
-				indent, fieldDef.Name)
-		}
+		writeFunc = "WRITE_INT64"
 	} else if checkType == StructFieldType_I16V ||
 		checkType == StructFieldType_U16V {
-		if isList {
-			this.writeLineFormat(sb,
-				"%sWRITE_LIST(this->%s, WRITE_INT16V);",
-				indent, fieldDef.Name)
-		} else {
-			this.writeLineFormat(sb,
-				"%sWRITE_INT16V(this->%s);",
-				indent, fieldDef.Name)
-		}
+		writeFunc = "WRITE_INT16V"
 	} else if checkType == StructFieldType_I32V ||
 		checkType == StructFieldType_U32V {
-		if isList {
-			this.writeLineFormat(sb,
-				"%sWRITE_LIST(this->%s, WRITE_INT32V);",
-				indent, fieldDef.Name)
-		} else {
-			this.writeLineFormat(sb,
-				"%sWRITE_INT32V(this->%s);",
-				indent, fieldDef.Name)
-		}
+		writeFunc = "WRITE_INT32V"
 	} else if checkType == StructFieldType_I64V ||
 		checkType == StructFieldType_U64V {
-		if isList {
-			this.writeLineFormat(sb,
-				"%sWRITE_LIST(this->%s, WRITE_INT64V);",
-				indent, fieldDef.Name)
-		} else {
-			this.writeLineFormat(sb,
-				"%sWRITE_INT64V(this->%s);",
-				indent, fieldDef.Name)
-		}
+		writeFunc = "WRITE_INT64V"
 	} else if checkType == StructFieldType_String ||
 		checkType == StructFieldType_Bytes {
-		if isList {
-			this.writeLineFormat(sb,
-				"%sWRITE_LIST(this->%s, WRITE_STRING);",
-				indent, fieldDef.Name)
-		} else {
-			this.writeLineFormat(sb,
-				"%sWRITE_STRING(this->%s);",
-				indent, fieldDef.Name)
-		}
+		writeFunc = "WRITE_STRING"
 	} else if checkType == StructFieldType_Enum {
-		if isList {
-			this.writeLineFormat(sb,
-				"%sWRITE_LIST(this->%s, WRITE_ENUM);",
-				indent, fieldDef.Name)
-		} else {
-			this.writeLineFormat(sb,
-				"%sWRITE_ENUM(this->%s);",
-				indent, fieldDef.Name)
-		}
+		writeFunc = "WRITE_ENUM"
 	} else if checkType == StructFieldType_Struct {
-		if isList {
+		writeFunc = "WRITE_STRUCT"
+	}
+
+	var indent string
+	if fieldDef.IsOptional {
+		indent = "        "
+	} else {
+		indent = "    "
+	}
+	if isList {
+		this.writeLineFormat(sb,
+			"%sWRITE_LIST(this->%s, %s);",
+			indent, fieldDef.Name, writeFunc)
+	} else {
+		this.writeLineFormat(sb,
+			"%s%s(this->%s);",
+			indent, writeFunc, fieldDef.Name)
+	}
+
+	if fieldDef.IsOptional {
+		this.writeLine(sb,
+			"    }")
+	}
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneStructImplDecodeFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"int %s::decode(const char *buffer, size_t size)",
+		structDef.Name)
+	this.writeLine(sb,
+		"{")
+
+	if len(structDef.Fields) <= 0 {
+		this.writeLine(sb,
+			"    return 0;")
+	} else {
+		this.writeLine(sb,
+			"    const char *p = buffer;")
+		this.writeLine(sb,
+			"    size_t left_bytes = size;")
+		this.writeEmptyLine(sb)
+
+		if structDef.OptionalByteCount > 0 {
 			this.writeLineFormat(sb,
-				"%sWRITE_LIST(this->%s, WRITE_STRUCT);",
-				indent, fieldDef.Name)
+				"    for (int i = 0; i < %d; ++i) {",
+				structDef.OptionalByteCount)
+			this.writeLine(sb,
+				"        READ_INT8(_has_bits_[i]);")
+			this.writeLine(sb,
+				"    }")
+			this.writeEmptyLine(sb)
+		}
+
+		for _, def := range structDef.Fields {
+			this.writeSourceFileOneStructImplDecodeFuncReadStatement(sb, def)
+		}
+
+		this.writeEmptyLine(sb)
+		this.writeLine(sb,
+			"    return size - left_bytes;")
+	}
+
+	this.writeLine(sb,
+		"}")
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneStructImplDecodeFuncReadStatement(
+	sb *strings.Builder, fieldDef *StructFieldDef) {
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"    if (has_%s()) {",
+			fieldDef.Name)
+	}
+
+	isList := fieldDef.Type == StructFieldType_List
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	var readFunc string
+	var cppType string
+	if checkType == StructFieldType_I8 {
+		readFunc = "READ_INT8"
+		cppType = "int8_t"
+	} else if checkType == StructFieldType_U8 {
+		readFunc = "READ_INT8"
+		cppType = "uint8_t"
+	} else if checkType == StructFieldType_Bool {
+		readFunc = "READ_INT8"
+		cppType = "bool"
+	} else if checkType == StructFieldType_I16 {
+		readFunc = "READ_INT16"
+		cppType = "int16_t"
+	} else if checkType == StructFieldType_U16 {
+		readFunc = "READ_INT16"
+		cppType = "uint16_t"
+	} else if checkType == StructFieldType_I32 {
+		readFunc = "READ_INT32"
+		cppType = "int32_t"
+	} else if checkType == StructFieldType_U32 {
+		readFunc = "READ_INT32"
+		cppType = "uint32_t"
+	} else if checkType == StructFieldType_I64 {
+		readFunc = "READ_INT64"
+		cppType = "int64_t"
+	} else if checkType == StructFieldType_U64 {
+		readFunc = "READ_INT64"
+		cppType = "uint64_t"
+	} else if checkType == StructFieldType_I16V {
+		readFunc = "READ_INT16V"
+		cppType = "int16_t"
+	} else if checkType == StructFieldType_U16V {
+		readFunc = "READ_INT16V"
+		cppType = "uint16_t"
+	} else if checkType == StructFieldType_I32V {
+		readFunc = "READ_INT32V"
+		cppType = "int32_t"
+	} else if checkType == StructFieldType_U32V {
+		readFunc = "READ_INT32V"
+		cppType = "uint32_t"
+	} else if checkType == StructFieldType_I64V {
+		readFunc = "READ_INT64V"
+		cppType = "int64_t"
+	} else if checkType == StructFieldType_U64V {
+		readFunc = "READ_INT64V"
+		cppType = "uint64_t"
+	} else if checkType == StructFieldType_String ||
+		checkType == StructFieldType_Bytes {
+		readFunc = "READ_STRING"
+		cppType = "std::string"
+	} else if checkType == StructFieldType_Struct {
+		readFunc = "READ_STRUCT"
+		cppType = this.getStructFullQualifiedName(fieldDef.RefStructDef)
+	}
+
+	var indent string
+	if fieldDef.IsOptional {
+		indent = "        "
+	} else {
+		indent = "    "
+	}
+	if isList {
+		if checkType == StructFieldType_Enum {
+			this.writeLineFormat(sb,
+				"%sREAD_ENUM_LIST(this->%s, %s);",
+				indent, fieldDef.Name,
+				this.getEnumFullQualifiedName(fieldDef.RefEnumDef))
 		} else {
 			this.writeLineFormat(sb,
-				"%sWRITE_STRUCT(this->%s);",
-				indent, fieldDef.Name)
+				"%sREAD_LIST(this->%s, %s, %s);",
+				indent, fieldDef.Name, readFunc, cppType)
+		}
+	} else {
+		if checkType == StructFieldType_Enum {
+			this.writeLineFormat(sb,
+				"%sREAD_ENUM(this->%s, %s);",
+				indent, fieldDef.Name,
+				this.getEnumFullQualifiedName(fieldDef.RefEnumDef))
+		} else {
+			this.writeLineFormat(sb,
+				"%s%s(this->%s);",
+				indent, readFunc, fieldDef.Name)
 		}
 	}
 
