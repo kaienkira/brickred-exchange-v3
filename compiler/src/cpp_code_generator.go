@@ -195,6 +195,7 @@ func (this *CppCodeGenerator) generateSourceFile() string {
 	this.writeSourceFileIncludeFileDecl(&sb)
 	this.writeNamespaceDeclStart(&sb)
 	this.writeSourceFileStructImpl(&sb)
+	this.writeSourceFileEnumMapImpl(&sb)
 	this.writeNamespaceDeclEnd(&sb)
 
 	return sb.String()
@@ -1213,7 +1214,8 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplDumpFuncWriteStatement
 
 	var writeStatement string
 	if checkType == StructFieldType_I8 ||
-		checkType == StructFieldType_U8 {
+		checkType == StructFieldType_U8 ||
+		checkType == StructFieldType_Enum {
 		if isList {
 			writeStatement = fmt.Sprintf(
 				"ss << \"%s: \" << (int)this->%s[i] << \" \"",
@@ -1221,6 +1223,58 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplDumpFuncWriteStatement
 		} else {
 			writeStatement = fmt.Sprintf(
 				"ss << \"%s: \" << (int)this->%s << \" \"",
+				fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_I16 ||
+		checkType == StructFieldType_U16 ||
+		checkType == StructFieldType_I32 ||
+		checkType == StructFieldType_U32 ||
+		checkType == StructFieldType_I64 ||
+		checkType == StructFieldType_U64 ||
+		checkType == StructFieldType_I16V ||
+		checkType == StructFieldType_U16V ||
+		checkType == StructFieldType_I32V ||
+		checkType == StructFieldType_U32V ||
+		checkType == StructFieldType_I64V ||
+		checkType == StructFieldType_U64V ||
+		checkType == StructFieldType_Bool {
+		if isList {
+			writeStatement = fmt.Sprintf(
+				"ss << \"%s: \" << this->%s[i] << \" \"",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(
+				"ss << \"%s: \" << this->%s << \" \"",
+				fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_String {
+		if isList {
+			writeStatement = fmt.Sprintf(
+				"ss << \"%s: \\\"\" << this->%s[i] << \"\\\" \"",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(
+				"ss << \"%s: \\\"\" << this->%s << \"\\\" \"",
+				fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_Bytes {
+		if isList {
+			writeStatement = fmt.Sprintf(
+				"ss << \"%s: \\\"\" << dumpBytes(this->%s[i]) << \"\\\" \"",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(
+				"ss << \"%s: \\\"\" << dumpBytes(this->%s) << \"\\\" \"",
+				fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_Struct {
+		if isList {
+			writeStatement = fmt.Sprintf(
+				"ss << \"%s { \" << this->%s[i].dump() << \" } \"",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(
+				"ss << \"%s { \" << this->%s.dump() << \" } \"",
 				fieldDef.Name, fieldDef.Name)
 		}
 	}
@@ -1241,10 +1295,90 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplDumpFuncWriteStatement
 		this.writeLineFormat(sb,
 			"%s}",
 			indent)
+	} else {
+		this.writeLineFormat(sb,
+			"%s%s;",
+			indent, writeStatement)
 	}
 
 	if fieldDef.IsOptional {
 		this.writeLine(sb,
 			"    }")
 	}
+}
+
+func (this *CppCodeGenerator) writeSourceFileEnumMapImpl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	for _, def := range protoDef.EnumMaps {
+		this.writeSourceFileOneEnumMapImpl(sb, def)
+	}
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneEnumMapImpl(
+	sb *strings.Builder, enumMapDef *EnumMapDef) {
+
+	this.writeSourceFileOneEnumMapImplCreateFunc(sb, enumMapDef)
+}
+
+func (this *CppCodeGenerator) writeSourceFileOneEnumMapImplCreateFunc(
+	sb *strings.Builder, enumMapDef *EnumMapDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"brickred::exchange::BaseStruct *%s::create(int id)",
+		enumMapDef.Name)
+	this.writeLine(sb,
+		"{")
+
+	this.writeLine(sb,
+		"    static constexpr int id_list[] = {")
+	for _, def := range enumMapDef.Items {
+		if def.RefStructDef == nil {
+			continue
+		}
+		this.writeLineFormat(sb,
+			"        %s,",
+			def.Name)
+	}
+	this.writeLine(sb,
+		"    };")
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb, ""+
+		"    static constexpr brickred::exchange::BaseStruct::CreateFunc "+
+		"create_func_list[] = {")
+	for _, def := range enumMapDef.Items {
+		if def.RefStructDef == nil {
+			continue
+		}
+		this.writeLineFormat(sb,
+			"        &%s::create,",
+			this.getStructFullQualifiedName(def.RefStructDef))
+	}
+	this.writeLine(sb,
+		"    };")
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    static constexpr const int *begin = id_list;")
+	this.writeLine(sb,
+		"    static constexpr const int *end = id_list + sizeof(id_list) / sizeof(int);")
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    const int *ret = std::lower_bound(begin, end, id);")
+	this.writeLine(sb,
+		"    if (ret == end || *ret != id) {")
+	this.writeLine(sb,
+		"        return nullptr;")
+	this.writeLine(sb,
+		"    } else {")
+	this.writeLine(sb,
+		"        return create_func_list[ret - begin]();")
+	this.writeLine(sb,
+		"    }")
+	this.writeLine(sb,
+		"}")
 }

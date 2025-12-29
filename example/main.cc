@@ -629,7 +629,7 @@ int main()
                   << "a8_27 = " << msg->a8_27 << std::endl
                   << "a9 = " << msg->a9 << std::endl
                   << "a10 = " << msg->a10 << std::endl
-                  << "a11 = " << msg->a11 << std::endl
+                  << "a11 = " << (int)msg->a11 << std::endl
                   << "a12 = " << msg->a12 << std::endl
                   << "a13 = " << msg->a13 << std::endl
                   << "a13_1 = " << msg->a13_1 << std::endl
