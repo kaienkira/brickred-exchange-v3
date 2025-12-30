@@ -471,6 +471,24 @@ func (this *PhpCodeGenerator) writeOneStructDeclDecodeFunc(
 		"    public function decodeFromStream($s)")
 	this.writeLine(sb,
 		"    {")
+
+	if len(structDef.Fields) > 0 {
+		if structDef.OptionalByteCount > 0 {
+			this.writeLineFormat(sb,
+				"        for ($i = 0; $i < %d; ++$i) {",
+				structDef.OptionalByteCount)
+			this.writeLine(sb,
+				"            $this->_has_bits_[$i] = Codec::readUint8($s);")
+			this.writeLine(sb,
+				"        }")
+			this.writeEmptyLine(sb)
+		}
+
+		for _, def := range structDef.Fields {
+			this.writeOneStructDeclDecodeFuncReadStatement(sb, def)
+		}
+	}
+
 	this.writeLine(sb,
 		"    }")
 
@@ -487,6 +505,21 @@ func (this *PhpCodeGenerator) writeOneStructDeclDecodeFunc(
 		"        fclose($s);")
 	this.writeLine(sb,
 		"    }")
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclDecodeFuncReadStatement(
+	sb *strings.Builder, fieldDef *StructFieldDef) {
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"        if ($this->has_%s()) {",
+			fieldDef.Name)
+	}
+
+	if fieldDef.IsOptional {
+		this.writeLine(sb,
+			"        }")
+	}
 }
 
 func (this *PhpCodeGenerator) writeOneStructDeclOptionalFunc(
