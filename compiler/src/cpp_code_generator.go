@@ -49,7 +49,7 @@ func (this *CppCodeGenerator) getEnumFullQualifiedName(
 
 	protoDef := enumDef.ParentRef
 	namespaceDef, ok := protoDef.Namespaces["cpp"]
-	if ok && len(namespaceDef.NamespaceParts) > 0 {
+	if ok {
 		return fmt.Sprintf(
 			"%s::%s",
 			strings.Join(namespaceDef.NamespaceParts, "::"),
@@ -65,7 +65,7 @@ func (this *CppCodeGenerator) getEnumItemFullQualifiedName(
 	enumDef := enumItemDef.ParentRef
 	protoDef := enumDef.ParentRef
 	namespaceDef, ok := protoDef.Namespaces["cpp"]
-	if ok && len(namespaceDef.NamespaceParts) > 0 {
+	if ok {
 		return fmt.Sprintf(
 			"%s::%s::%s",
 			strings.Join(namespaceDef.NamespaceParts, "::"),
@@ -84,7 +84,7 @@ func (this *CppCodeGenerator) getStructFullQualifiedName(
 
 	protoDef := structDef.ParentRef
 	namespaceDef, ok := protoDef.Namespaces["cpp"]
-	if ok && len(namespaceDef.NamespaceParts) > 0 {
+	if ok {
 		return fmt.Sprintf(
 			"%s::%s",
 			strings.Join(namespaceDef.NamespaceParts, "::"),
@@ -191,7 +191,9 @@ func (this *CppCodeGenerator) writeDontEditComment(
 func (this *CppCodeGenerator) writeNamespaceDeclStart(
 	sb *strings.Builder) {
 
-	namespaceDef, ok := this.descriptor.ProtoDef.Namespaces["cpp"]
+	protoDef := this.descriptor.ProtoDef
+
+	namespaceDef, ok := protoDef.Namespaces["cpp"]
 	if ok == false {
 		return
 	}
@@ -206,7 +208,9 @@ func (this *CppCodeGenerator) writeNamespaceDeclStart(
 func (this *CppCodeGenerator) writeNamespaceDeclEnd(
 	sb *strings.Builder) {
 
-	namespaceDef, ok := this.descriptor.ProtoDef.Namespaces["cpp"]
+	protoDef := this.descriptor.ProtoDef
+
+	namespaceDef, ok := protoDef.Namespaces["cpp"]
 	if ok == false {
 		return
 	}
@@ -255,6 +259,7 @@ func (this *CppCodeGenerator) writeHeaderFileIncludeFileDecl(
 	sb *strings.Builder) {
 
 	protoDef := this.descriptor.ProtoDef
+
 	useCStdDefH := false
 	useCStdIntH := false
 	useStringH := false

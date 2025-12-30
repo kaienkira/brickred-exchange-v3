@@ -99,6 +99,8 @@ func main() {
 	var generator CodeGenerator = nil
 	if optLanguage == "cpp" {
 		generator = NewCppCodeGenerator()
+	} else if optLanguage == "php" {
+		generator = NewPhpCodeGenerator()
 	} else {
 		os.Exit(1)
 	}
