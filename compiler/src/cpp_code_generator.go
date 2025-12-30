@@ -8,8 +8,7 @@ import (
 )
 
 type CppCodeGenerator struct {
-	descriptor *ProtocolDescriptor
-	newLineStr string
+	BaseCodeGenerator
 }
 
 func NewCppCodeGenerator() *CppCodeGenerator {
@@ -19,19 +18,14 @@ func NewCppCodeGenerator() *CppCodeGenerator {
 }
 
 func (this *CppCodeGenerator) Close() {
-	this.descriptor = nil
+	this.close()
 }
 
 func (this *CppCodeGenerator) Generate(
 	descriptor *ProtocolDescriptor,
 	outputDir string, newLineType NewLineType) bool {
 
-	this.descriptor = descriptor
-	if newLineType == NewLineType_Dos {
-		this.newLineStr = "\r\n"
-	} else {
-		this.newLineStr = "\n"
-	}
+	this.init(descriptor, newLineType)
 
 	headerFilePath := filepath.Join(
 		outputDir, this.descriptor.ProtoDef.Name+".h")
@@ -48,26 +42,6 @@ func (this *CppCodeGenerator) Generate(
 	}
 
 	return true
-}
-
-func (this *CppCodeGenerator) writeLine(
-	sb *strings.Builder, line string) {
-
-	sb.WriteString(line)
-	sb.WriteString(this.newLineStr)
-}
-
-func (this *CppCodeGenerator) writeLineFormat(
-	sb *strings.Builder, format string, args ...any) {
-
-	fmt.Fprintf(sb, format, args...)
-	sb.WriteString(this.newLineStr)
-}
-
-func (this *CppCodeGenerator) writeEmptyLine(
-	sb *strings.Builder) {
-
-	sb.WriteString(this.newLineStr)
 }
 
 func (this *CppCodeGenerator) getEnumFullQualifiedName(
