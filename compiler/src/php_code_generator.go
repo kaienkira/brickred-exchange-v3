@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -35,12 +36,109 @@ func (this *PhpCodeGenerator) Generate(
 	return true
 }
 
+func (this *PhpCodeGenerator) getEnumFullQualifiedName(
+	enumDef *EnumDef) string {
+
+	protoDef := enumDef.ParentRef
+	namespaceDef, ok := protoDef.Namespaces["php"]
+	if ok {
+		return fmt.Sprintf(
+			"\\%s::%s",
+			strings.Join(namespaceDef.NamespaceParts, "\\"),
+			enumDef.Name)
+	} else {
+		return enumDef.Name
+	}
+}
+
+func (this *PhpCodeGenerator) getEnumItemFullQualifiedName(
+	enumItemDef *EnumItemDef) string {
+
+	enumDef := enumItemDef.ParentRef
+	protoDef := enumDef.ParentRef
+	namespaceDef, ok := protoDef.Namespaces["php"]
+	if ok {
+		return fmt.Sprintf(
+			"\\%s\\%s::%s",
+			strings.Join(namespaceDef.NamespaceParts, "\\"),
+			enumDef.Name,
+			enumItemDef.Name)
+	} else {
+		return fmt.Sprintf(
+			"%s::%s",
+			enumDef.Name,
+			enumItemDef.Name)
+	}
+}
+
+func (this *PhpCodeGenerator) getStructFullQualifiedName(
+	structDef *StructDef) string {
+
+	protoDef := structDef.ParentRef
+	namespaceDef, ok := protoDef.Namespaces["php"]
+	if ok {
+		return fmt.Sprintf(
+			"\\%s\\%s",
+			strings.Join(namespaceDef.NamespaceParts, "\\"),
+			structDef.Name)
+	} else {
+		return structDef.Name
+	}
+}
+
+func (this *PhpCodeGenerator) getStructFieldPhpTypeDefaultValue(
+	fieldDef *StructFieldDef) string {
+
+	checkType := fieldDef.Type
+
+	if checkType == StructFieldType_I8 ||
+		checkType == StructFieldType_U8 ||
+		checkType == StructFieldType_I16 ||
+		checkType == StructFieldType_U16 ||
+		checkType == StructFieldType_I32 ||
+		checkType == StructFieldType_U32 ||
+		checkType == StructFieldType_I16V ||
+		checkType == StructFieldType_U16V ||
+		checkType == StructFieldType_I32V ||
+		checkType == StructFieldType_U32V {
+		return "0"
+	} else if checkType == StructFieldType_I64 ||
+		checkType == StructFieldType_I64V {
+		return "new Int64()"
+	} else if checkType == StructFieldType_U64 ||
+		checkType == StructFieldType_U64V {
+		return "new UInt64()"
+	} else if checkType == StructFieldType_String ||
+		checkType == StructFieldType_Bytes {
+		return "''"
+	} else if checkType == StructFieldType_Bool {
+		return "false"
+	} else if checkType == StructFieldType_Enum {
+		if len(fieldDef.RefEnumDef.Items) > 0 {
+			return this.getEnumItemFullQualifiedName(
+				fieldDef.RefEnumDef.Items[0])
+		} else {
+			return "0"
+		}
+	} else if checkType == StructFieldType_Struct {
+		return fmt.Sprintf("new %s()",
+			this.getStructFullQualifiedName(fieldDef.RefStructDef))
+	} else if checkType == StructFieldType_List {
+		return "[]"
+	} else {
+		return ""
+	}
+}
+
 func (this *PhpCodeGenerator) generateSourceFile() string {
 	var sb strings.Builder
 
 	this.writePhpTagStart(&sb)
 	this.writeDontEditComment(&sb)
 	this.writeNamespaceDecl(&sb)
+	this.writeUseStatementsDecl(&sb)
+	this.writeEnumDecl(&sb)
+	this.writeStructDecl(&sb)
 	this.writePhpTagEnd(&sb)
 
 	return sb.String()
@@ -92,4 +190,369 @@ func (this *PhpCodeGenerator) writeNamespaceDecl(
 	this.writeLineFormat(sb,
 		"namespace %s;",
 		namespaceName)
+}
+
+func (this *PhpCodeGenerator) writeUseStatementsDecl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	useBrickredExchangeCodec := false
+	useBrickredExchangeInt64 := false
+	useBrickredExchangeUInt64 := false
+
+	for _, structDef := range protoDef.Structs {
+		if len(structDef.Fields) > 0 {
+			useBrickredExchangeCodec = true
+		}
+		for _, def := range structDef.Fields {
+			if def.Type == StructFieldType_I64 ||
+				def.Type == StructFieldType_I64V {
+				useBrickredExchangeInt64 = true
+			} else if def.Type == StructFieldType_U64 ||
+				def.Type == StructFieldType_U64V {
+				useBrickredExchangeUInt64 = true
+			}
+		}
+	}
+
+	if useBrickredExchangeCodec == false &&
+		useBrickredExchangeInt64 == false &&
+		useBrickredExchangeUInt64 == false {
+		return
+	}
+
+	this.writeEmptyLine(sb)
+	if useBrickredExchangeCodec {
+		this.writeLine(sb,
+			"use \\Brickred\\Exchange\\Codec;")
+	}
+	if useBrickredExchangeInt64 {
+		this.writeLine(sb,
+			"use \\Brickred\\Exchange\\Int64;")
+	}
+	if useBrickredExchangeUInt64 {
+		this.writeLine(sb,
+			"use \\Brickred\\Exchange\\UInt64;")
+	}
+}
+
+func (this *PhpCodeGenerator) writeEnumDecl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	for _, def := range protoDef.Enums {
+		this.writeOneEnumDecl(sb, def)
+	}
+}
+
+func (this *PhpCodeGenerator) writeOneEnumDecl(
+	sb *strings.Builder, enumDef *EnumDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"final class %s",
+		enumDef.Name)
+	this.writeLine(sb,
+		"{")
+
+	for _, def := range enumDef.Items {
+		if def.Type == EnumItemType_Default ||
+			def.Type == EnumItemType_Int {
+			this.writeLineFormat(sb,
+				"    const %s = %d;",
+				def.Name, def.IntValue)
+		} else if def.Type == EnumItemType_CurrentEnumRef {
+			this.writeLineFormat(sb,
+				"    const %s = self::%s;",
+				def.Name, def.RefEnumItemDef.Name)
+		} else if def.Type == EnumItemType_OtherEnumRef {
+			this.writeLineFormat(sb,
+				"    const %s = %s;",
+				def.Name,
+				this.getEnumItemFullQualifiedName(def.RefEnumItemDef))
+		}
+	}
+
+	this.writeLine(sb,
+		"}")
+}
+
+func (this *PhpCodeGenerator) writeStructDecl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	for _, def := range protoDef.Structs {
+		this.writeOneStructDecl(sb, def)
+	}
+}
+
+func (this *PhpCodeGenerator) writeOneStructDecl(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"final class %s",
+		structDef.Name)
+	this.writeLine(sb,
+		"{")
+	this.writeOneStructDeclFieldDecl(sb, structDef)
+	this.writeOneStructDeclConstructor(sb, structDef)
+	this.writeOneStructDeclEncodeFunc(sb, structDef)
+	this.writeOneStructDeclDecodeFunc(sb, structDef)
+	this.writeOneStructDeclOptionalFunc(sb, structDef)
+	this.writeLine(sb,
+		"}")
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclFieldDecl(
+	sb *strings.Builder, structDef *StructDef) {
+
+	if structDef.OptionalFieldCount > 0 {
+		this.writeLineFormat(sb,
+			"    private $_has_bits_;")
+	}
+
+	for _, def := range structDef.Fields {
+		this.writeLineFormat(sb,
+			"    public $%s;",
+			def.Name)
+	}
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclConstructor(
+	sb *strings.Builder, structDef *StructDef) {
+
+	if len(structDef.Fields) > 0 {
+		this.writeEmptyLine(sb)
+	}
+	this.writeLine(sb,
+		"    public function __construct()")
+	this.writeLine(sb,
+		"    {")
+
+	if structDef.OptionalFieldCount > 0 {
+		zeroList := strings.Repeat("0, ", structDef.OptionalByteCount)
+		zeroList = zeroList[:len(zeroList)-2]
+		this.writeLineFormat(sb,
+			"        $this->_has_bits_ = [%s];",
+			zeroList)
+	}
+
+	for _, def := range structDef.Fields {
+		this.writeLineFormat(sb,
+			"        $this->%s = %s;",
+			def.Name,
+			this.getStructFieldPhpTypeDefaultValue(def))
+	}
+
+	this.writeLine(sb,
+		"    }")
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclEncodeFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public function encode()")
+	this.writeLine(sb,
+		"    {")
+
+	if len(structDef.Fields) <= 0 {
+		this.writeLine(sb,
+			"        return '';")
+	} else {
+		this.writeLine(sb,
+			"        $output = '';")
+		this.writeEmptyLine(sb)
+
+		if structDef.OptionalByteCount > 0 {
+			this.writeLineFormat(sb,
+				"        for ($i = 0; $i < %d; ++$i) {",
+				structDef.OptionalByteCount)
+			this.writeLine(sb, "            "+
+				"$output .= Codec::writeInt8($this->_has_bits_[$i]);")
+			this.writeLine(sb,
+				"        }")
+			this.writeEmptyLine(sb)
+		}
+
+		for _, def := range structDef.Fields {
+			this.writeOneStructDeclEncodeFuncWriteStatement(sb, def)
+		}
+
+		this.writeEmptyLine(sb)
+		this.writeLine(sb,
+			"        return $output;")
+	}
+
+	this.writeLine(sb,
+		"    }")
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclEncodeFuncWriteStatement(
+	sb *strings.Builder, fieldDef *StructFieldDef) {
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"        if ($this->has_%s()) {",
+			fieldDef.Name)
+	}
+
+	isList := fieldDef.Type == StructFieldType_List
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	var writeFunc string
+	if checkType == StructFieldType_I8 ||
+		checkType == StructFieldType_U8 ||
+		checkType == StructFieldType_Bool {
+		writeFunc = "writeInt8"
+	} else if checkType == StructFieldType_I16 ||
+		checkType == StructFieldType_U16 {
+		writeFunc = "writeInt16"
+	} else if checkType == StructFieldType_I32 ||
+		checkType == StructFieldType_U32 {
+		writeFunc = "writeInt32"
+	} else if checkType == StructFieldType_I64 ||
+		checkType == StructFieldType_U64 {
+		writeFunc = "writeInt64"
+	} else if checkType == StructFieldType_I16V ||
+		checkType == StructFieldType_U16V {
+		writeFunc = "writeInt16V"
+	} else if checkType == StructFieldType_I32V ||
+		checkType == StructFieldType_U32V ||
+		checkType == StructFieldType_Enum {
+		writeFunc = "writeInt32V"
+	} else if checkType == StructFieldType_I64V ||
+		checkType == StructFieldType_U64V {
+		writeFunc = "writeInt64V"
+	} else if checkType == StructFieldType_String ||
+		checkType == StructFieldType_Bytes {
+		writeFunc = "writeString"
+	} else if checkType == StructFieldType_Struct {
+		writeFunc = "writeStruct"
+	}
+
+	var indent string
+	if fieldDef.IsOptional {
+		indent = "            "
+	} else {
+		indent = "        "
+	}
+	if isList {
+		this.writeLineFormat(sb,
+			"%s$output .= Codec::writeList($this->%s, '%s');",
+			indent, fieldDef.Name, writeFunc)
+	} else {
+		this.writeLineFormat(sb,
+			"%s$output .= Codec::%s($this->%s);",
+			indent, writeFunc, fieldDef.Name)
+	}
+
+	if fieldDef.IsOptional {
+		this.writeLine(sb,
+			"        }")
+	}
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclDecodeFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public function decodeFromStream($s)")
+	this.writeLine(sb,
+		"    {")
+	this.writeLine(sb,
+		"    }")
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public function decode($buf)")
+	this.writeLine(sb,
+		"    {")
+	this.writeLine(sb,
+		"        $s = Codec::openStreamForBuffer($buf);")
+	this.writeLine(sb,
+		"        $this->decodeFromStream($s);")
+	this.writeLine(sb,
+		"        fclose($s);")
+	this.writeLine(sb,
+		"    }")
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclOptionalFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	if structDef.OptionalFieldCount <= 0 {
+		return
+	}
+
+	for _, def := range structDef.Fields {
+		if def.IsOptional == false {
+			continue
+		}
+
+		byteIndex := def.OptionalFieldIndex / 8
+		byteMask := fmt.Sprintf("0x%02x", 1<<(def.OptionalFieldIndex%8))
+
+		this.writeEmptyLine(sb)
+		this.writeLineFormat(sb,
+			"    public function has_%s()",
+			def.Name)
+		this.writeLine(sb,
+			"    {")
+		this.writeLineFormat(sb,
+			"        return (bool)($this->_has_bits_[%d] & %s);",
+			byteIndex, byteMask)
+		this.writeLine(sb,
+			"    }")
+
+		this.writeEmptyLine(sb)
+		this.writeLineFormat(sb,
+			"    public function set_has_%s()",
+			def.Name)
+		this.writeLine(sb,
+			"    {")
+		this.writeLineFormat(sb,
+			"        $this->_has_bits_[%d] |= %s;",
+			byteIndex, byteMask)
+		this.writeLine(sb,
+			"    }")
+
+		this.writeEmptyLine(sb)
+		this.writeLineFormat(sb,
+			"    public function clear_has_%s()",
+			def.Name)
+		this.writeLine(sb,
+			"    {")
+		this.writeLineFormat(sb,
+			"        $this->_has_bits_[%d] &= ~%s;",
+			byteIndex, byteMask)
+		this.writeLine(sb,
+			"    }")
+
+		this.writeEmptyLine(sb)
+		this.writeLineFormat(sb,
+			"    public function set_%s($value)",
+			def.Name)
+		this.writeLine(sb,
+			"    {")
+		this.writeLineFormat(sb,
+			"        $this->set_has_%s();",
+			def.Name)
+		this.writeLineFormat(sb,
+			"        $this->%s = $value;",
+			def.Name)
+		this.writeLine(sb,
+			"    }")
+	}
 }
