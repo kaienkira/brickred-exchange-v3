@@ -36,21 +36,6 @@ func (this *PhpCodeGenerator) Generate(
 	return true
 }
 
-func (this *PhpCodeGenerator) getEnumFullQualifiedName(
-	enumDef *EnumDef) string {
-
-	protoDef := enumDef.ParentRef
-	namespaceDef, ok := protoDef.Namespaces["php"]
-	if ok {
-		return fmt.Sprintf(
-			"\\%s::%s",
-			strings.Join(namespaceDef.NamespaceParts, "\\"),
-			enumDef.Name)
-	} else {
-		return enumDef.Name
-	}
-}
-
 func (this *PhpCodeGenerator) getEnumItemFullQualifiedName(
 	enumItemDef *EnumItemDef) string {
 
@@ -302,6 +287,9 @@ func (this *PhpCodeGenerator) writeOneStructDecl(
 	this.writeOneStructDeclConstructor(sb, structDef)
 	this.writeOneStructDeclEncodeFunc(sb, structDef)
 	this.writeOneStructDeclDecodeFunc(sb, structDef)
+	this.writeOneStructDeclToArrayFunc(sb, structDef)
+	this.writeOneStructDeclFromArrayFunc(sb, structDef)
+	this.writeOneStructDeclJsonFunc(sb)
 	this.writeOneStructDeclOptionalFunc(sb, structDef)
 	this.writeLine(sb,
 		"}")
@@ -516,10 +504,363 @@ func (this *PhpCodeGenerator) writeOneStructDeclDecodeFuncReadStatement(
 			fieldDef.Name)
 	}
 
+	isList := fieldDef.Type == StructFieldType_List
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	var readFunc string
+	if checkType == StructFieldType_I8 {
+		readFunc = "readInt8"
+	} else if checkType == StructFieldType_U8 {
+		readFunc = "readUInt8"
+	} else if checkType == StructFieldType_I16 {
+		readFunc = "readInt16"
+	} else if checkType == StructFieldType_U16 {
+		readFunc = "readUInt16"
+	} else if checkType == StructFieldType_I32 {
+		readFunc = "readInt32"
+	} else if checkType == StructFieldType_U32 {
+		readFunc = "readUInt32"
+	} else if checkType == StructFieldType_I64 {
+		readFunc = "readInt64"
+	} else if checkType == StructFieldType_U64 {
+		readFunc = "readUInt64"
+	} else if checkType == StructFieldType_I16V {
+		readFunc = "readInt16V"
+	} else if checkType == StructFieldType_U16V {
+		readFunc = "readUInt16V"
+	} else if checkType == StructFieldType_I32V ||
+		checkType == StructFieldType_Enum {
+		readFunc = "readInt32V"
+	} else if checkType == StructFieldType_U32V {
+		readFunc = "readUInt32V"
+	} else if checkType == StructFieldType_I64V {
+		readFunc = "readInt64V"
+	} else if checkType == StructFieldType_U64V {
+		readFunc = "readUInt64V"
+	} else if checkType == StructFieldType_String ||
+		checkType == StructFieldType_Bytes {
+		readFunc = "readString"
+	} else if checkType == StructFieldType_Bool {
+		readFunc = "readBool"
+	}
+
+	var indent string
+	if fieldDef.IsOptional {
+		indent = "            "
+	} else {
+		indent = "        "
+	}
+	if isList {
+		if checkType == StructFieldType_Struct {
+			this.writeLineFormat(sb,
+				"%s$this->%s = Codec::readStructList($s, '%s');",
+				indent, fieldDef.Name,
+				this.getStructFullQualifiedName(fieldDef.RefStructDef))
+		} else {
+			this.writeLineFormat(sb,
+				"%s$this->%s = Codec::readList($s, '%s');",
+				indent, fieldDef.Name, readFunc)
+		}
+	} else {
+		if checkType == StructFieldType_Struct {
+			this.writeLineFormat(sb,
+				"%s$this->%s = Codec::readStruct($s, '%s');",
+				indent, fieldDef.Name,
+				this.getStructFullQualifiedName(fieldDef.RefStructDef))
+		} else {
+			this.writeLineFormat(sb,
+				"%s$this->%s = Codec::%s($s);",
+				indent, fieldDef.Name, readFunc)
+		}
+	}
+
 	if fieldDef.IsOptional {
 		this.writeLine(sb,
 			"        }")
 	}
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclToArrayFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public function toArray()")
+	this.writeLine(sb,
+		"    {")
+
+	if len(structDef.Fields) <= 0 {
+		this.writeLine(sb,
+			"        return [];")
+	} else {
+		this.writeLine(sb,
+			"        $output = [];")
+		this.writeEmptyLine(sb)
+
+		for _, def := range structDef.Fields {
+			this.writeOneStructDeclToArrayFuncWriteStatement(sb, def)
+		}
+
+		this.writeEmptyLine(sb)
+		this.writeLine(sb,
+			"        return $output;")
+	}
+
+	this.writeLine(sb,
+		"    }")
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclToArrayFuncWriteStatement(
+	sb *strings.Builder, fieldDef *StructFieldDef) {
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"        if ($this->has_%s()) {",
+			fieldDef.Name)
+	}
+
+	isList := fieldDef.Type == StructFieldType_List
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	var indent string
+	if fieldDef.IsOptional {
+		indent = "            "
+	} else {
+		indent = "        "
+	}
+
+	if checkType == StructFieldType_I8 ||
+		checkType == StructFieldType_U8 ||
+		checkType == StructFieldType_I16 ||
+		checkType == StructFieldType_U16 ||
+		checkType == StructFieldType_I32 ||
+		checkType == StructFieldType_U32 ||
+		checkType == StructFieldType_I16V ||
+		checkType == StructFieldType_U16V ||
+		checkType == StructFieldType_I32V ||
+		checkType == StructFieldType_U32V ||
+		checkType == StructFieldType_String ||
+		checkType == StructFieldType_Bool ||
+		checkType == StructFieldType_Enum {
+		this.writeLineFormat(sb,
+			"%s$output['%s'] = $this->%s;",
+			indent, fieldDef.Name, fieldDef.Name)
+	} else if checkType == StructFieldType_Bytes {
+		if isList {
+			this.writeLineFormat(sb,
+				"%s$output['%s'] = [];",
+				indent, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%sfor ($i = 0; $i < count($this->%s); ++$i) {",
+				indent, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s    $output['%s'][$i] = base64_encode($this->%s[$i]);",
+				indent, fieldDef.Name, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s}",
+				indent)
+		} else {
+			this.writeLineFormat(sb,
+				"%s$output['%s'] = base64_encode($this->%s);",
+				indent, fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_I64 ||
+		checkType == StructFieldType_U64 ||
+		checkType == StructFieldType_I64V ||
+		checkType == StructFieldType_U64V {
+		if isList {
+			this.writeLineFormat(sb,
+				"%s$output['%s'] = [];",
+				indent, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%sfor ($i = 0; $i < count($this->%s); ++$i) {",
+				indent, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s    $output['%s'][$i] = $this->%s[$i]->toString();",
+				indent, fieldDef.Name, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s}",
+				indent)
+		} else {
+			this.writeLineFormat(sb,
+				"%s$output['%s'] = $this->%s->toString();",
+				indent, fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_Struct {
+		if isList {
+			this.writeLineFormat(sb,
+				"%s$output['%s'] = [];",
+				indent, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%sfor ($i = 0; $i < count($this->%s); ++$i) {",
+				indent, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s    $output['%s'][$i] = $this->%s[$i]->toArray();",
+				indent, fieldDef.Name, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s}",
+				indent)
+		} else {
+			this.writeLineFormat(sb,
+				"%s$output['%s'] = $this->%s->toArray();",
+				indent, fieldDef.Name, fieldDef.Name)
+		}
+	}
+
+	if fieldDef.IsOptional {
+		this.writeLine(sb,
+			"        }")
+	}
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclFromArrayFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public function fromArray($arr)")
+	this.writeLine(sb,
+		"    {")
+
+	if len(structDef.Fields) > 0 {
+		if structDef.OptionalByteCount > 0 {
+			this.writeLineFormat(sb,
+				"        for ($i = 0; $i < %d; ++$i) {",
+				structDef.OptionalByteCount)
+			this.writeLine(sb,
+				"            $this->_has_bits_[$i] = 0;")
+			this.writeLine(sb,
+				"        }")
+			this.writeEmptyLine(sb)
+		}
+
+		for _, def := range structDef.Fields {
+			this.writeOneStructDeclFromArrayFuncReadStatement(sb, def)
+		}
+	}
+
+	this.writeLine(sb,
+		"    }")
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclFromArrayFuncReadStatement(
+	sb *strings.Builder, fieldDef *StructFieldDef) {
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"        if (isset($arr['%s'])) {",
+			fieldDef.Name)
+		this.writeLineFormat(sb,
+			"            $this->set_has_%s();",
+			fieldDef.Name)
+	}
+
+	isList := fieldDef.Type == StructFieldType_List
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	var readFunc string
+	if checkType == StructFieldType_I8 ||
+		checkType == StructFieldType_U8 ||
+		checkType == StructFieldType_I16 ||
+		checkType == StructFieldType_U16 ||
+		checkType == StructFieldType_I32 ||
+		checkType == StructFieldType_U32 ||
+		checkType == StructFieldType_I16V ||
+		checkType == StructFieldType_U16V ||
+		checkType == StructFieldType_I32V ||
+		checkType == StructFieldType_U32V ||
+		checkType == StructFieldType_Enum {
+		readFunc = "readIntFromArray"
+	} else if checkType == StructFieldType_I64 ||
+		checkType == StructFieldType_I64V {
+		readFunc = "readInt64FromArray"
+	} else if checkType == StructFieldType_U64 ||
+		checkType == StructFieldType_U64V {
+		readFunc = "readUInt64FromArray"
+	} else if checkType == StructFieldType_String {
+		readFunc = "readStringFromArray"
+	} else if checkType == StructFieldType_Bytes {
+		readFunc = "readBytesFromArray"
+	} else if checkType == StructFieldType_Bool {
+		readFunc = "readBoolFromArray"
+	}
+
+	var indent string
+	if fieldDef.IsOptional {
+		indent = "            "
+	} else {
+		indent = "        "
+	}
+	if isList {
+		if checkType == StructFieldType_Struct {
+			this.writeLineFormat(sb, ""+
+				"%s$this->%s = Codec::readStructListFromArray("+
+				"$arr, '%s', '%s');",
+				indent, fieldDef.Name, fieldDef.Name,
+				this.getStructFullQualifiedName(fieldDef.RefStructDef))
+		} else {
+			this.writeLineFormat(sb, ""+
+				"%s$this->%s = Codec::readListFromArray("+
+				"$arr, '%s', '%s');",
+				indent, fieldDef.Name, fieldDef.Name, readFunc)
+		}
+	} else {
+		if checkType == StructFieldType_Struct {
+			this.writeLineFormat(sb, ""+
+				"%s$this->%s = Codec::readStructFromArray("+
+				"$arr, '%s', '%s');",
+				indent, fieldDef.Name, fieldDef.Name,
+				this.getStructFullQualifiedName(fieldDef.RefStructDef))
+		} else {
+			this.writeLineFormat(sb,
+				"%s$this->%s = Codec::%s($arr, '%s');",
+				indent, fieldDef.Name, readFunc, fieldDef.Name)
+		}
+	}
+
+	if fieldDef.IsOptional {
+		this.writeLine(sb,
+			"        }")
+	}
+}
+
+func (this *PhpCodeGenerator) writeOneStructDeclJsonFunc(
+	sb *strings.Builder) {
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public function toJson()")
+	this.writeLine(sb,
+		"    {")
+	this.writeLine(sb,
+		"        return json_encode($this->toArray());")
+	this.writeLine(sb,
+		"    }")
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public function fromJson($json)")
+	this.writeLine(sb,
+		"    {")
+	this.writeLine(sb,
+		"        $this->fromArray(json_decode($json, true));")
+	this.writeLine(sb,
+		"    }")
 }
 
 func (this *PhpCodeGenerator) writeOneStructDeclOptionalFunc(
