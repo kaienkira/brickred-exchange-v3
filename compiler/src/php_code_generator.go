@@ -124,6 +124,7 @@ func (this *PhpCodeGenerator) generateSourceFile() string {
 	this.writeUseStatementsDecl(&sb)
 	this.writeEnumDecl(&sb)
 	this.writeStructDecl(&sb)
+	this.writeEnumMapDecl(&sb)
 	this.writePhpTagEnd(&sb)
 
 	return sb.String()
@@ -929,4 +930,148 @@ func (this *PhpCodeGenerator) writeOneStructDeclOptionalFunc(
 		this.writeLine(sb,
 			"    }")
 	}
+}
+
+func (this *PhpCodeGenerator) writeEnumMapDecl(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	for _, def := range protoDef.EnumMaps {
+		this.writeOneEnumMapDecl(sb, def)
+	}
+}
+
+func (this *PhpCodeGenerator) writeOneEnumMapDecl(
+	sb *strings.Builder, enumMapDef *EnumMapDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"final class %s",
+		enumMapDef.Name)
+	this.writeLine(sb,
+		"{")
+
+	for _, def := range enumMapDef.Items {
+		if def.Type == EnumMapItemType_Default ||
+			def.Type == EnumMapItemType_Int {
+			this.writeLineFormat(sb,
+				"    const %s = %d;",
+				def.Name, def.IntValue)
+		} else if def.Type == EnumMapItemType_CurrentEnumRef {
+			this.writeLineFormat(sb,
+				"    const %s = self::%s;",
+				def.Name, def.RefEnumItemDef.Name)
+		}
+	}
+	if len(enumMapDef.Items) > 0 {
+		this.writeEmptyLine(sb)
+	}
+
+	// name id map
+	this.writeLine(sb,
+		"    private static $s_name_id_map_ = [")
+	for _, def := range enumMapDef.Items {
+		if def.RefStructDef == nil {
+			continue
+		}
+		qualifiedName :=
+			this.getStructFullQualifiedName(def.RefStructDef)
+		qualifiedName = strings.TrimPrefix(qualifiedName, "\\")
+		qualifiedName = strings.ReplaceAll(qualifiedName, "\\", "\\\\")
+		this.writeLineFormat(sb,
+			"        '%s' => %d,",
+			qualifiedName, def.IntValue)
+	}
+	this.writeLine(sb,
+		"    ];")
+
+	// id name map
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    private static $s_id_name_map_ = [")
+	for _, def := range enumMapDef.Items {
+		if def.RefStructDef == nil {
+			continue
+		}
+		qualifiedName :=
+			this.getStructFullQualifiedName(def.RefStructDef)
+		qualifiedName = strings.TrimPrefix(qualifiedName, "\\")
+		qualifiedName = strings.ReplaceAll(qualifiedName, "\\", "\\\\")
+		this.writeLineFormat(sb,
+			"        %d => '%s',",
+			def.IntValue, qualifiedName)
+	}
+	this.writeLine(sb,
+		"    ];")
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public static function getIdByName($name)")
+	this.writeLine(sb,
+		"    {")
+	this.writeLine(sb,
+		"        if (isset(self::$s_name_id_map_[$name])) {")
+	this.writeLine(sb,
+		"            return self::$s_name_id_map_[$name];")
+	this.writeLine(sb,
+		"        } else {")
+	this.writeLine(sb,
+		"            return false;")
+	this.writeLine(sb,
+		"        }")
+	this.writeLine(sb,
+		"    }")
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public static function getNameById($id)")
+	this.writeLine(sb,
+		"    {")
+	this.writeLine(sb,
+		"        if (isset(self::$s_id_name_map_[$id])) {")
+	this.writeLine(sb,
+		"            return self::$s_id_name_map_[$id];")
+	this.writeLine(sb,
+		"        } else {")
+	this.writeLine(sb,
+		"            return false;")
+	this.writeLine(sb,
+		"        }")
+	this.writeLine(sb,
+		"    }")
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public static function id($obj)")
+	this.writeLine(sb,
+		"    {")
+	this.writeLine(sb,
+		"        $name = get_class($obj);")
+	this.writeLine(sb,
+		"        return self::getIdByName($name);")
+	this.writeLine(sb,
+		"    }")
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"    public static function create($id)")
+	this.writeLine(sb,
+		"    {")
+	this.writeLine(sb,
+		"        $name = self::getNameById($id);")
+	this.writeLine(sb,
+		"        if ($name === false) {")
+	this.writeLine(sb,
+		"            return null;")
+	this.writeLine(sb,
+		"        }")
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"        return new $name();")
+	this.writeLine(sb,
+		"    }")
+
+	this.writeLine(sb,
+		"}")
 }
