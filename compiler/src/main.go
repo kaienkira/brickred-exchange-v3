@@ -101,6 +101,8 @@ func main() {
 		generator = NewCppCodeGenerator()
 	} else if optLanguage == "php" {
 		generator = NewPhpCodeGenerator()
+	} else if optLanguage == "csharp" {
+		generator = NewCSharpCodeGenerator()
 	} else {
 		os.Exit(1)
 	}
