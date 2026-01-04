@@ -178,8 +178,9 @@ func (this *CSharpCodeGenerator) generateSourceFile() string {
 	this.writeNamespaceDeclStart(&sb)
 
 	isFirstDecl := true
-	this.writeEnumDecl(&sb, &isFirstDecl)
-	this.writeStructDecl(&sb, &isFirstDecl)
+	indent := this.getIndent()
+	this.writeEnumDecl(&sb, &isFirstDecl, indent)
+	this.writeStructDecl(&sb, &isFirstDecl, indent)
 
 	this.writeNamespaceDeclEnd(&sb)
 
@@ -197,6 +198,16 @@ func (this *CSharpCodeGenerator) writeDontEditComment(
 		" * Do not edit unless you are sure that you know what you are doing.")
 	this.writeLine(sb,
 		" */")
+}
+
+func (this *CSharpCodeGenerator) getIndent() string {
+	protoDef := this.descriptor.ProtoDef
+
+	if _, ok := protoDef.Namespaces["csharp"]; ok {
+		return "    "
+	} else {
+		return ""
+	}
 }
 
 func (this *CSharpCodeGenerator) writeUseStatementsDecl(
@@ -276,17 +287,17 @@ func (this *CSharpCodeGenerator) writeNamespaceDeclEnd(
 }
 
 func (this *CSharpCodeGenerator) writeEnumDecl(
-	sb *strings.Builder, isFirstDecl *bool) {
+	sb *strings.Builder, isFirstDecl *bool, indent string) {
 
 	protoDef := this.descriptor.ProtoDef
 
 	for _, def := range protoDef.Enums {
-		this.writeOneEnumDecl(sb, def, isFirstDecl)
+		this.writeOneEnumDecl(sb, def, isFirstDecl, indent)
 	}
 }
 
 func (this *CSharpCodeGenerator) writeOneEnumDecl(
-	sb *strings.Builder, enumDef *EnumDef, isFirstDecl *bool) {
+	sb *strings.Builder, enumDef *EnumDef, isFirstDecl *bool, indent string) {
 
 	if *isFirstDecl == true {
 		*isFirstDecl = false
@@ -295,48 +306,50 @@ func (this *CSharpCodeGenerator) writeOneEnumDecl(
 	}
 
 	this.writeLineFormat(sb,
-		"    public enum %s",
-		enumDef.Name)
-	this.writeLine(sb,
-		"    {")
+		"%spublic enum %s",
+		indent, enumDef.Name)
+	this.writeLineFormat(sb,
+		"%s{",
+		indent)
 
 	for _, def := range enumDef.Items {
 		if def.Type == EnumItemType_Default {
 			this.writeLineFormat(sb,
-				"        %s,",
-				def.Name)
+				"%s    %s,",
+				indent, def.Name)
 		} else if def.Type == EnumItemType_Int {
 			this.writeLineFormat(sb,
-				"        %s = %d,",
-				def.Name, def.IntValue)
+				"%s    %s = %d,",
+				indent, def.Name, def.IntValue)
 		} else if def.Type == EnumItemType_CurrentEnumRef {
 			this.writeLineFormat(sb,
-				"        %s = %s,",
-				def.Name, def.RefEnumItemDef.Name)
+				"%s    %s = %s,",
+				indent, def.Name, def.RefEnumItemDef.Name)
 		} else if def.Type == EnumItemType_OtherEnumRef {
 			this.writeLineFormat(sb,
-				"        %s = %s,",
-				def.Name,
+				"%s    %s = %s,",
+				indent, def.Name,
 				this.getEnumItemFullQualifiedName(def.RefEnumItemDef))
 		}
 	}
 
-	this.writeLine(sb,
-		"    }")
+	this.writeLineFormat(sb,
+		"%s}",
+		indent)
 }
 
 func (this *CSharpCodeGenerator) writeStructDecl(
-	sb *strings.Builder, isFirstDecl *bool) {
+	sb *strings.Builder, isFirstDecl *bool, indent string) {
 
 	protoDef := this.descriptor.ProtoDef
 
 	for _, def := range protoDef.Structs {
-		this.writeOneStructDecl(sb, def, isFirstDecl)
+		this.writeOneStructDecl(sb, def, isFirstDecl, indent)
 	}
 }
 
 func (this *CSharpCodeGenerator) writeOneStructDecl(
-	sb *strings.Builder, structDef *StructDef, isFirstDecl *bool) {
+	sb *strings.Builder, structDef *StructDef, isFirstDecl *bool, indent string) {
 
 	if *isFirstDecl == true {
 		*isFirstDecl = false
@@ -345,31 +358,35 @@ func (this *CSharpCodeGenerator) writeOneStructDecl(
 	}
 
 	this.writeLineFormat(sb,
-		"    public sealed class %s : BaseStruct",
-		structDef.Name)
-	this.writeLine(sb,
-		"    {")
-	this.writeOneStructDeclFieldDecl(sb, structDef)
-	this.writeOneStructDeclCreateFunc(sb, structDef)
-	this.writeOneStructDeclConstructor(sb, structDef)
-	this.writeOneStructDeclCopyConstructor(sb, structDef)
-	this.writeOneStructDeclCloneFunc(sb, structDef)
-	this.writeLine(sb,
-		"    }")
+		"%spublic sealed class %s : BaseStruct",
+		indent, structDef.Name)
+	this.writeLineFormat(sb,
+		"%s{",
+		indent)
+	this.writeOneStructDeclFieldDecl(sb, structDef, indent)
+	this.writeOneStructDeclCreateFunc(sb, structDef, indent)
+	this.writeOneStructDeclConstructor(sb, structDef, indent)
+	this.writeOneStructDeclCopyConstructor(sb, structDef, indent)
+	this.writeOneStructDeclCloneFunc(sb, structDef, indent)
+	this.writeOneStructDeclEncodeToStreamFunc(sb, structDef, indent)
+	this.writeLineFormat(sb,
+		"%s}",
+		indent)
 }
 
 func (this *CSharpCodeGenerator) writeOneStructDeclFieldDecl(
-	sb *strings.Builder, structDef *StructDef) {
+	sb *strings.Builder, structDef *StructDef, indent string) {
 
 	if structDef.OptionalByteCount > 0 {
 		this.writeLineFormat(sb,
-			"        private byte[] _has_bits_ = new byte[%d];",
-			structDef.OptionalByteCount)
+			"%s    private byte[] _has_bits_ = new byte[%d];",
+			indent, structDef.OptionalByteCount)
 	}
 
 	for _, def := range structDef.Fields {
 		this.writeLineFormat(sb,
-			"        public %s %s = %s;",
+			"%s    public %s %s = %s;",
+			indent,
 			this.getStructFieldCSharpType(def),
 			def.Name,
 			this.getStructFieldCSharpTypeDefaultValue(def))
@@ -377,49 +394,56 @@ func (this *CSharpCodeGenerator) writeOneStructDeclFieldDecl(
 }
 
 func (this *CSharpCodeGenerator) writeOneStructDeclCreateFunc(
-	sb *strings.Builder, structDef *StructDef) {
+	sb *strings.Builder, structDef *StructDef, indent string) {
 
 	if len(structDef.Fields) > 0 {
 		this.writeEmptyLine(sb)
 	}
 	this.writeLineFormat(sb,
-		"        public static %s Create()",
-		structDef.Name)
-	this.writeLine(sb,
-		"        {")
+		"%s    public static %s Create()",
+		indent, structDef.Name)
 	this.writeLineFormat(sb,
-		"            return new %s();",
-		structDef.Name)
-	this.writeLine(sb,
-		"        }")
+		"%s    {",
+		indent)
+	this.writeLineFormat(sb,
+		"%s        return new %s();",
+		indent, structDef.Name)
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
 }
 
 func (this *CSharpCodeGenerator) writeOneStructDeclConstructor(
-	sb *strings.Builder, structDef *StructDef) {
+	sb *strings.Builder, structDef *StructDef, indent string) {
 
 	this.writeEmptyLine(sb)
 	this.writeLineFormat(sb,
-		"        public %s()",
-		structDef.Name)
-	this.writeLine(sb,
-		"        {")
-	this.writeLine(sb,
-		"        }")
+		"%s    public %s()",
+		indent, structDef.Name)
+	this.writeLineFormat(sb,
+		"%s    {",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
 }
 
 func (this *CSharpCodeGenerator) writeOneStructDeclCopyConstructor(
-	sb *strings.Builder, structDef *StructDef) {
+	sb *strings.Builder, structDef *StructDef, indent string) {
 
 	this.writeEmptyLine(sb)
 	this.writeLineFormat(sb,
-		"        public %s(%s other)",
-		structDef.Name, structDef.Name)
-	this.writeLine(sb,
-		"        {")
+		"%s    public %s(%s other)",
+		indent, structDef.Name, structDef.Name)
+	this.writeLineFormat(sb,
+		"%s    {",
+		indent)
 
 	if structDef.OptionalFieldCount > 0 {
-		this.writeLineFormat(sb, "            "+
-			"this._has_bits_ = other._has_bits_.Clone() as byte[];")
+		this.writeLineFormat(sb, ""+
+			"%s        "+
+			"this._has_bits_ = other._has_bits_.Clone() as byte[];",
+			indent)
 	}
 
 	for _, def := range structDef.Fields {
@@ -429,17 +453,17 @@ func (this *CSharpCodeGenerator) writeOneStructDeclCopyConstructor(
 			checkType == StructFieldType_String ||
 			checkType == StructFieldType_Bool ||
 			checkType == StructFieldType_Enum {
-			this.writeLineFormat(sb, "            "+
-				"this.%s = other.%s;",
-				def.Name, def.Name)
+			this.writeLineFormat(sb,
+				"%s        this.%s = other.%s;",
+				indent, def.Name, def.Name)
 		} else if checkType == StructFieldType_Bytes {
-			this.writeLineFormat(sb, "            "+
-				"this.%s = other.%s.Clone() as byte[];",
-				def.Name, def.Name)
+			this.writeLineFormat(sb,
+				"%s        this.%s = other.%s.Clone() as byte[];",
+				indent, def.Name, def.Name)
 		} else if checkType == StructFieldType_Struct {
-			this.writeLineFormat(sb, "            "+
-				"this.%s = new %s(other.%s);",
-				def.Name,
+			this.writeLineFormat(sb,
+				"%s        this.%s = new %s(other.%s);",
+				indent, def.Name,
 				this.getStructFullQualifiedName(def.RefStructDef),
 				def.Name)
 		} else if checkType == StructFieldType_List {
@@ -449,51 +473,63 @@ func (this *CSharpCodeGenerator) writeOneStructDeclCopyConstructor(
 				checkType == StructFieldType_String ||
 				checkType == StructFieldType_Bool ||
 				checkType == StructFieldType_Enum {
-				this.writeLineFormat(sb, "            "+
-					"this.%s = new %s(other.%s);",
-					def.Name,
+				this.writeLineFormat(sb,
+					"%s        this.%s = new %s(other.%s);",
+					indent, def.Name,
 					this.getStructFieldCSharpType(def),
 					def.Name)
 			} else if checkType == StructFieldType_Bytes {
-				this.writeLineFormat(sb, "            "+
-					"this.%s = other.%s.ConvertAll(o => o.Clone() as byte[]);",
-					def.Name, def.Name)
+				this.writeLineFormat(sb,
+					"%s        this.%s = other.%s.ConvertAll(o => o.Clone() as byte[]);",
+					indent, def.Name, def.Name)
 			} else if checkType == StructFieldType_Struct {
-				this.writeLineFormat(sb, "            "+
-					"this.%s = other.%s.ConvertAll(o => new %s(o));",
-					def.Name, def.Name,
+				this.writeLineFormat(sb,
+					"%s        this.%s = other.%s.ConvertAll(o => new %s(o));",
+					indent, def.Name, def.Name,
 					this.getStructFullQualifiedName(def.RefStructDef))
 			}
 		}
 	}
 
-	this.writeLine(sb,
-		"        }")
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
 }
 
 func (this *CSharpCodeGenerator) writeOneStructDeclCloneFunc(
-	sb *strings.Builder, structDef *StructDef) {
+	sb *strings.Builder, structDef *StructDef, indent string) {
 
 	this.writeEmptyLine(sb)
 	this.writeLineFormat(sb,
-		"        new public %s Clone()",
-		structDef.Name)
-	this.writeLine(sb,
-		"        {")
+		"%s    new public %s Clone()",
+		indent, structDef.Name)
 	this.writeLineFormat(sb,
-		"            return (%s)CloneInternal();",
-		structDef.Name)
-	this.writeLine(sb,
-		"        }")
+		"%s    {",
+		indent)
+	this.writeLineFormat(sb,
+		"%s        return (%s)CloneInternal();",
+		indent, structDef.Name)
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
 
 	this.writeEmptyLine(sb)
-	this.writeLine(sb,
-		"        protected override BaseStruct CloneInternal()")
-	this.writeLine(sb,
-		"        {")
 	this.writeLineFormat(sb,
-		"            return new %s(this);",
-		structDef.Name)
-	this.writeLine(sb,
-		"        }")
+		"%s    protected override BaseStruct CloneInternal()",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    {",
+		indent)
+	this.writeLineFormat(sb,
+		"%s        return new %s(this);",
+		indent, structDef.Name)
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclEncodeToStreamFunc(
+	sb *strings.Builder, structDef *StructDef, indent string) {
+
+	this.writeEmptyLine(sb)
 }
