@@ -300,7 +300,7 @@ func (this *PhpCodeGenerator) writeOneStructDeclFieldDecl(
 	sb *strings.Builder, structDef *StructDef) {
 
 	if structDef.OptionalFieldCount > 0 {
-		this.writeLineFormat(sb,
+		this.writeLine(sb,
 			"    private $_has_bits_;")
 	}
 

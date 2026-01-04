@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 )
@@ -35,11 +36,152 @@ func (this *CSharpCodeGenerator) Generate(
 	return true
 }
 
+func (this *CSharpCodeGenerator) getEnumFullQualifiedName(
+	enumDef *EnumDef) string {
+
+	protoDef := enumDef.ParentRef
+	namespaceDef, ok := protoDef.Namespaces["csharp"]
+	if ok {
+		return fmt.Sprintf(
+			"%s.%s",
+			namespaceDef.Namespace,
+			enumDef.Name)
+	} else {
+		return enumDef.Name
+	}
+}
+
+func (this *CSharpCodeGenerator) getEnumItemFullQualifiedName(
+	enumItemDef *EnumItemDef) string {
+
+	enumDef := enumItemDef.ParentRef
+	protoDef := enumDef.ParentRef
+	namespaceDef, ok := protoDef.Namespaces["csharp"]
+	if ok {
+		return fmt.Sprintf(
+			"%s.%s.%s",
+			namespaceDef.Namespace,
+			enumDef.Name,
+			enumItemDef.Name)
+	} else {
+		return fmt.Sprintf(
+			"%s.%s",
+			enumDef.Name,
+			enumItemDef.Name)
+	}
+}
+
+func (this *CSharpCodeGenerator) getStructFullQualifiedName(
+	structDef *StructDef) string {
+
+	protoDef := structDef.ParentRef
+	namespaceDef, ok := protoDef.Namespaces["csharp"]
+	if ok {
+		return fmt.Sprintf(
+			"%s.%s",
+			namespaceDef.Namespace,
+			structDef.Name)
+	} else {
+		return structDef.Name
+	}
+}
+
+func (this *CSharpCodeGenerator) getStructFieldCSharpType(
+	fieldDef *StructFieldDef) string {
+
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	csharpType := ""
+	if checkType == StructFieldType_I8 {
+		csharpType = "sbyte"
+	} else if checkType == StructFieldType_U8 {
+		csharpType = "byte"
+	} else if checkType == StructFieldType_I16 ||
+		checkType == StructFieldType_I16V {
+		csharpType = "short"
+	} else if checkType == StructFieldType_U16 ||
+		checkType == StructFieldType_U16V {
+		csharpType = "ushort"
+	} else if checkType == StructFieldType_I32 ||
+		checkType == StructFieldType_I32V {
+		csharpType = "int"
+	} else if checkType == StructFieldType_U32 ||
+		checkType == StructFieldType_U32V {
+		csharpType = "uint"
+	} else if checkType == StructFieldType_I64 ||
+		checkType == StructFieldType_I64V {
+		csharpType = "long"
+	} else if checkType == StructFieldType_U64 ||
+		checkType == StructFieldType_U64V {
+		csharpType = "ulong"
+	} else if checkType == StructFieldType_String {
+		csharpType = "string"
+	} else if checkType == StructFieldType_Bytes {
+		csharpType = "byte[]"
+	} else if checkType == StructFieldType_Bool {
+		csharpType = "bool"
+	} else if checkType == StructFieldType_Enum {
+		csharpType = this.getEnumFullQualifiedName(fieldDef.RefEnumDef)
+	} else if checkType == StructFieldType_Struct {
+		csharpType = this.getStructFullQualifiedName(fieldDef.RefStructDef)
+	}
+
+	if fieldDef.Type == StructFieldType_List {
+		return fmt.Sprintf("List<%s>", csharpType)
+	} else {
+		return csharpType
+	}
+}
+
+func (this *CSharpCodeGenerator) getStructFieldCSharpTypeDefaultValue(
+	fieldDef *StructFieldDef) string {
+
+	checkType := fieldDef.Type
+
+	if StructFieldTypeIsInteger(checkType) {
+		return "0"
+	} else if checkType == StructFieldType_String {
+		return "\"\""
+	} else if checkType == StructFieldType_Bytes {
+		return "new byte[0]"
+	} else if checkType == StructFieldType_Bool {
+		return "false"
+	} else if checkType == StructFieldType_Enum {
+		if len(fieldDef.RefEnumDef.Items) > 0 {
+			return this.getEnumItemFullQualifiedName(
+				fieldDef.RefEnumDef.Items[0])
+		} else {
+			return fmt.Sprintf("(%s)0",
+				this.getEnumFullQualifiedName(fieldDef.RefEnumDef))
+		}
+	} else if checkType == StructFieldType_Struct {
+		return fmt.Sprintf("new %s()",
+			this.getStructFullQualifiedName(fieldDef.RefStructDef))
+	} else if checkType == StructFieldType_List {
+		return fmt.Sprintf("new %s()",
+			this.getStructFieldCSharpType(fieldDef))
+	} else {
+		return ""
+	}
+}
+
 func (this *CSharpCodeGenerator) generateSourceFile() string {
 	var sb strings.Builder
 
 	this.writeDontEditComment(&sb)
 	this.writeUseStatementsDecl(&sb)
+	this.writeNamespaceDeclStart(&sb)
+
+	isFirstDecl := true
+	this.writeEnumDecl(&sb, &isFirstDecl)
+	this.writeStructDecl(&sb, &isFirstDecl)
+
+	this.writeNamespaceDeclEnd(&sb)
 
 	return sb.String()
 }
@@ -106,4 +248,252 @@ func (this *CSharpCodeGenerator) writeUseStatementsDecl(
 		this.writeLine(sb,
 			"using System.Collections.Generic;")
 	}
+}
+
+func (this *CSharpCodeGenerator) writeNamespaceDeclStart(
+	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	namespaceDef, ok := protoDef.Namespaces["csharp"]
+	if ok == false {
+		return
+	}
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"namespace %s",
+		namespaceDef.Namespace)
+	this.writeLine(sb,
+		"{")
+}
+
+func (this *CSharpCodeGenerator) writeNamespaceDeclEnd(
+	sb *strings.Builder) {
+
+	this.writeLine(sb,
+		"}")
+}
+
+func (this *CSharpCodeGenerator) writeEnumDecl(
+	sb *strings.Builder, isFirstDecl *bool) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	for _, def := range protoDef.Enums {
+		this.writeOneEnumDecl(sb, def, isFirstDecl)
+	}
+}
+
+func (this *CSharpCodeGenerator) writeOneEnumDecl(
+	sb *strings.Builder, enumDef *EnumDef, isFirstDecl *bool) {
+
+	if *isFirstDecl == true {
+		*isFirstDecl = false
+	} else {
+		this.writeEmptyLine(sb)
+	}
+
+	this.writeLineFormat(sb,
+		"    public enum %s",
+		enumDef.Name)
+	this.writeLine(sb,
+		"    {")
+
+	for _, def := range enumDef.Items {
+		if def.Type == EnumItemType_Default {
+			this.writeLineFormat(sb,
+				"        %s,",
+				def.Name)
+		} else if def.Type == EnumItemType_Int {
+			this.writeLineFormat(sb,
+				"        %s = %d,",
+				def.Name, def.IntValue)
+		} else if def.Type == EnumItemType_CurrentEnumRef {
+			this.writeLineFormat(sb,
+				"        %s = %s,",
+				def.Name, def.RefEnumItemDef.Name)
+		} else if def.Type == EnumItemType_OtherEnumRef {
+			this.writeLineFormat(sb,
+				"        %s = %s,",
+				def.Name,
+				this.getEnumItemFullQualifiedName(def.RefEnumItemDef))
+		}
+	}
+
+	this.writeLine(sb,
+		"    }")
+}
+
+func (this *CSharpCodeGenerator) writeStructDecl(
+	sb *strings.Builder, isFirstDecl *bool) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	for _, def := range protoDef.Structs {
+		this.writeOneStructDecl(sb, def, isFirstDecl)
+	}
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDecl(
+	sb *strings.Builder, structDef *StructDef, isFirstDecl *bool) {
+
+	if *isFirstDecl == true {
+		*isFirstDecl = false
+	} else {
+		this.writeEmptyLine(sb)
+	}
+
+	this.writeLineFormat(sb,
+		"    public sealed class %s : BaseStruct",
+		structDef.Name)
+	this.writeLine(sb,
+		"    {")
+	this.writeOneStructDeclFieldDecl(sb, structDef)
+	this.writeOneStructDeclCreateFunc(sb, structDef)
+	this.writeOneStructDeclConstructor(sb, structDef)
+	this.writeOneStructDeclCopyConstructor(sb, structDef)
+	this.writeOneStructDeclCloneFunc(sb, structDef)
+	this.writeLine(sb,
+		"    }")
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclFieldDecl(
+	sb *strings.Builder, structDef *StructDef) {
+
+	if structDef.OptionalByteCount > 0 {
+		this.writeLineFormat(sb,
+			"        private byte[] _has_bits_ = new byte[%d];",
+			structDef.OptionalByteCount)
+	}
+
+	for _, def := range structDef.Fields {
+		this.writeLineFormat(sb,
+			"        public %s %s = %s;",
+			this.getStructFieldCSharpType(def),
+			def.Name,
+			this.getStructFieldCSharpTypeDefaultValue(def))
+	}
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclCreateFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	if len(structDef.Fields) > 0 {
+		this.writeEmptyLine(sb)
+	}
+	this.writeLineFormat(sb,
+		"        public static %s Create()",
+		structDef.Name)
+	this.writeLine(sb,
+		"        {")
+	this.writeLineFormat(sb,
+		"            return new %s();",
+		structDef.Name)
+	this.writeLine(sb,
+		"        }")
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclConstructor(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"        public %s()",
+		structDef.Name)
+	this.writeLine(sb,
+		"        {")
+	this.writeLine(sb,
+		"        }")
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclCopyConstructor(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"        public %s(%s other)",
+		structDef.Name, structDef.Name)
+	this.writeLine(sb,
+		"        {")
+
+	if structDef.OptionalFieldCount > 0 {
+		this.writeLineFormat(sb, "            "+
+			"this._has_bits_ = other._has_bits_.Clone() as byte[];")
+	}
+
+	for _, def := range structDef.Fields {
+		checkType := def.Type
+
+		if StructFieldTypeIsInteger(checkType) ||
+			checkType == StructFieldType_String ||
+			checkType == StructFieldType_Bool ||
+			checkType == StructFieldType_Enum {
+			this.writeLineFormat(sb, "            "+
+				"this.%s = other.%s;",
+				def.Name, def.Name)
+		} else if checkType == StructFieldType_Bytes {
+			this.writeLineFormat(sb, "            "+
+				"this.%s = other.%s.Clone() as byte[];",
+				def.Name, def.Name)
+		} else if checkType == StructFieldType_Struct {
+			this.writeLineFormat(sb, "            "+
+				"this.%s = new %s(other.%s);",
+				def.Name,
+				this.getStructFullQualifiedName(def.RefStructDef),
+				def.Name)
+		} else if checkType == StructFieldType_List {
+			checkType = def.ListType
+
+			if StructFieldTypeIsInteger(checkType) ||
+				checkType == StructFieldType_String ||
+				checkType == StructFieldType_Bool ||
+				checkType == StructFieldType_Enum {
+				this.writeLineFormat(sb, "            "+
+					"this.%s = new %s(other.%s);",
+					def.Name,
+					this.getStructFieldCSharpType(def),
+					def.Name)
+			} else if checkType == StructFieldType_Bytes {
+				this.writeLineFormat(sb, "            "+
+					"this.%s = other.%s.ConvertAll(o => o.Clone() as byte[]);",
+					def.Name, def.Name)
+			} else if checkType == StructFieldType_Struct {
+				this.writeLineFormat(sb, "            "+
+					"this.%s = other.%s.ConvertAll(o => new %s(o));",
+					def.Name, def.Name,
+					this.getStructFullQualifiedName(def.RefStructDef))
+			}
+		}
+	}
+
+	this.writeLine(sb,
+		"        }")
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclCloneFunc(
+	sb *strings.Builder, structDef *StructDef) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"        new public %s Clone()",
+		structDef.Name)
+	this.writeLine(sb,
+		"        {")
+	this.writeLineFormat(sb,
+		"            return (%s)CloneInternal();",
+		structDef.Name)
+	this.writeLine(sb,
+		"        }")
+
+	this.writeEmptyLine(sb)
+	this.writeLine(sb,
+		"        protected override BaseStruct CloneInternal()")
+	this.writeLine(sb,
+		"        {")
+	this.writeLineFormat(sb,
+		"            return new %s(this);",
+		structDef.Name)
+	this.writeLine(sb,
+		"        }")
 }
