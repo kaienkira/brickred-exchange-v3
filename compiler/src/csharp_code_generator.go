@@ -377,6 +377,7 @@ func (this *CSharpCodeGenerator) writeOneStructDecl(
 	this.writeOneStructDeclCopyConstructor(sb, structDef, indent)
 	this.writeOneStructDeclCloneFunc(sb, structDef, indent)
 	this.writeOneStructDeclEncodeToStreamFunc(sb, structDef, indent)
+	this.writeOneStructDeclDecodeFromStreamFunc(sb, structDef, indent)
 	this.writeOneStructDeclOptionalFunc(sb, structDef, indent)
 	this.writeLineFormat(sb,
 		"%s}",
@@ -580,11 +581,126 @@ func (this *CSharpCodeGenerator) writeOneStructDeclEncodeToStreamFuncWriteStatem
 			indent, fieldDef.Name)
 	}
 
+	isList := fieldDef.Type == StructFieldType_List
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	var writeFunc string
+	if checkType == StructFieldType_I8 {
+		writeFunc = "WriteInt8"
+	} else if checkType == StructFieldType_U8 {
+		writeFunc = "WriteUInt8"
+	} else if checkType == StructFieldType_I16 {
+		writeFunc = "WriteInt16"
+	} else if checkType == StructFieldType_U16 {
+		writeFunc = "WriteUInt16"
+	} else if checkType == StructFieldType_I32 {
+		writeFunc = "WriteInt32"
+	} else if checkType == StructFieldType_U32 {
+		writeFunc = "WriteUInt32"
+	} else if checkType == StructFieldType_I64 {
+		writeFunc = "WriteInt64"
+	} else if checkType == StructFieldType_U64 {
+		writeFunc = "WriteUInt64"
+	} else if checkType == StructFieldType_I16V {
+		writeFunc = "WriteInt16V"
+	} else if checkType == StructFieldType_U16V {
+		writeFunc = "WriteUInt16V"
+	} else if checkType == StructFieldType_I32V {
+		writeFunc = "WriteInt32V"
+	} else if checkType == StructFieldType_U32V {
+		writeFunc = "WriteUInt32V"
+	} else if checkType == StructFieldType_I64V {
+		writeFunc = "WriteInt64V"
+	} else if checkType == StructFieldType_U64V {
+		writeFunc = "WriteUInt64V"
+	} else if checkType == StructFieldType_String {
+		writeFunc = "WriteString"
+	} else if checkType == StructFieldType_Bytes {
+		writeFunc = "WriteBytes"
+	} else if checkType == StructFieldType_Bool {
+		writeFunc = "WriteBool"
+	} else {
+		writeFunc = ""
+	}
+
+	var indent2 string
+	if fieldDef.IsOptional {
+		indent2 = "            "
+	} else {
+		indent2 = "        "
+	}
+	if isList {
+		if checkType == StructFieldType_Enum {
+			this.writeLineFormat(sb,
+				"%s%ss.WriteLength(this.%s.Count);",
+				indent, indent2, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s%sfor (int i = 0; i < this.%s.Count; ++i) {",
+				indent, indent2, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s%s    s.WriteInt32V((int)this.%s[i]);",
+				indent, indent2, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s%s}",
+				indent, indent2)
+		} else if checkType == StructFieldType_Struct {
+			this.writeLineFormat(sb,
+				"%s%ss.WriteLength(this.%s.Count);",
+				indent, indent2, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s%sfor (int i = 0; i < this.%s.Count; ++i) {",
+				indent, indent2, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s%s    this.%s[i].EncodeToStream(s);",
+				indent, indent2, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s%s}",
+				indent, indent2)
+		} else {
+			this.writeLineFormat(sb,
+				"%s%ss.WriteLength(this.%s.Count);",
+				indent, indent2, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s%sfor (int i = 0; i < this.%s.Count; ++i) {",
+				indent, indent2, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s%s    s.%s(this.%s[i]);",
+				indent, indent2, writeFunc, fieldDef.Name)
+			this.writeLineFormat(sb,
+				"%s%s}",
+				indent, indent2)
+		}
+
+	} else {
+		if checkType == StructFieldType_Enum {
+			this.writeLineFormat(sb,
+				"%s%ss.WriteInt32V((int)this.%s);",
+				indent, indent2, fieldDef.Name)
+		} else if checkType == StructFieldType_Struct {
+			this.writeLineFormat(sb,
+				"%s%sthis.%s.EncodeToStream(s);",
+				indent, indent2, fieldDef.Name)
+		} else {
+			this.writeLineFormat(sb,
+				"%s%ss.%s(this.%s);",
+				indent, indent2, writeFunc, fieldDef.Name)
+		}
+	}
+
 	if fieldDef.IsOptional {
 		this.writeLineFormat(sb,
 			"%s        }",
 			indent)
 	}
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclDecodeFromStreamFunc(
+	sb *strings.Builder, structDef *StructDef, indent string) {
 }
 
 func (this *CSharpCodeGenerator) writeOneStructDeclOptionalFunc(
