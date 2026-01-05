@@ -268,6 +268,7 @@ func (this *CSharpCodeGenerator) writeNamespaceDeclStart(
 
 	namespaceDef, ok := protoDef.Namespaces["csharp"]
 	if ok == false {
+		this.writeEmptyLine(sb)
 		return
 	}
 
@@ -281,6 +282,13 @@ func (this *CSharpCodeGenerator) writeNamespaceDeclStart(
 
 func (this *CSharpCodeGenerator) writeNamespaceDeclEnd(
 	sb *strings.Builder) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	_, ok := protoDef.Namespaces["csharp"]
+	if ok == false {
+		return
+	}
 
 	this.writeLine(sb,
 		"}")
@@ -369,6 +377,7 @@ func (this *CSharpCodeGenerator) writeOneStructDecl(
 	this.writeOneStructDeclCopyConstructor(sb, structDef, indent)
 	this.writeOneStructDeclCloneFunc(sb, structDef, indent)
 	this.writeOneStructDeclEncodeToStreamFunc(sb, structDef, indent)
+	this.writeOneStructDeclOptionalFunc(sb, structDef, indent)
 	this.writeLineFormat(sb,
 		"%s}",
 		indent)
@@ -532,4 +541,125 @@ func (this *CSharpCodeGenerator) writeOneStructDeclEncodeToStreamFunc(
 	sb *strings.Builder, structDef *StructDef, indent string) {
 
 	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"%s    public override void EncodeToStream(CodecOutputStream s)",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    {",
+		indent)
+
+	if structDef.OptionalByteCount > 0 {
+		this.writeLineFormat(sb,
+			"%s        for (int i = 0; i < %d; ++i) {",
+			indent, structDef.OptionalByteCount)
+		this.writeLineFormat(sb,
+			"%s            s.WriteUInt8(this._has_bits_[i]);",
+			indent)
+		this.writeLineFormat(sb,
+			"%s        }",
+			indent)
+		this.writeEmptyLine(sb)
+	}
+
+	for _, def := range structDef.Fields {
+		this.writeOneStructDeclEncodeToStreamFuncWriteStatement(
+			sb, def, indent)
+	}
+
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclEncodeToStreamFuncWriteStatement(
+	sb *strings.Builder, fieldDef *StructFieldDef, indent string) {
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"%s        if (has_%s()) {",
+			indent, fieldDef.Name)
+	}
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"%s        }",
+			indent)
+	}
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclOptionalFunc(
+	sb *strings.Builder, structDef *StructDef, indent string) {
+
+	if structDef.OptionalFieldCount <= 0 {
+		return
+	}
+
+	for _, def := range structDef.Fields {
+		if def.IsOptional == false {
+			continue
+		}
+
+		byteIndex := def.OptionalFieldIndex / 8
+		byteMask := fmt.Sprintf("0x%02x", 1<<(def.OptionalFieldIndex%8))
+
+		this.writeEmptyLine(sb)
+		this.writeLineFormat(sb,
+			"%s    public bool has_%s()",
+			indent, def.Name)
+		this.writeLineFormat(sb,
+			"%s    {",
+			indent)
+		this.writeLineFormat(sb,
+			"%s        return (this._has_bits_[%d] & %s) > 0;",
+			indent, byteIndex, byteMask)
+		this.writeLineFormat(sb,
+			"%s    }",
+			indent)
+
+		this.writeEmptyLine(sb)
+		this.writeLineFormat(sb,
+			"%s    public void set_has_%s()",
+			indent, def.Name)
+		this.writeLineFormat(sb,
+			"%s    {",
+			indent)
+		this.writeLineFormat(sb,
+			"%s        this._has_bits_[%d] |= %s;",
+			indent, byteIndex, byteMask)
+		this.writeLineFormat(sb,
+			"%s    }",
+			indent)
+
+		this.writeEmptyLine(sb)
+		this.writeLineFormat(sb,
+			"%s    public void clear_has_%s()",
+			indent, def.Name)
+		this.writeLineFormat(sb,
+			"%s    {",
+			indent)
+		this.writeLineFormat(sb,
+			"%s        this._has_bits_[%d] &= (~%s & 0xff);",
+			indent, byteIndex, byteMask)
+		this.writeLineFormat(sb,
+			"%s    }",
+			indent)
+
+		this.writeEmptyLine(sb)
+		this.writeLineFormat(sb,
+			"%s    public void set_%s(%s val)",
+			indent, def.Name,
+			this.getStructFieldCSharpType(def))
+		this.writeLineFormat(sb,
+			"%s    {",
+			indent)
+		this.writeLineFormat(sb,
+			"%s        set_has_%s();",
+			indent, def.Name)
+		this.writeLineFormat(sb,
+			"%s        this.%s = val;",
+			indent, def.Name)
+		this.writeLineFormat(sb,
+			"%s    }",
+			indent)
+	}
 }
