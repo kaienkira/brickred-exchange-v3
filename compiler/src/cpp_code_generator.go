@@ -1249,11 +1249,11 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplDumpFuncWriteStatement
 	} else if checkType == StructFieldType_Struct {
 		if isList {
 			writeStatement = fmt.Sprintf(
-				"ss << \"%s { \" << this->%s[i].dump() << \" } \"",
+				"ss << \"%s: { \" << this->%s[i].dump() << \" } \"",
 				fieldDef.Name, fieldDef.Name)
 		} else {
 			writeStatement = fmt.Sprintf(
-				"ss << \"%s { \" << this->%s.dump() << \" } \"",
+				"ss << \"%s: { \" << this->%s.dump() << \" } \"",
 				fieldDef.Name, fieldDef.Name)
 		}
 	}

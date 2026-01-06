@@ -181,6 +181,7 @@ func (this *CSharpCodeGenerator) generateSourceFile() string {
 	indent := this.getIndent()
 	this.writeEnumDecl(&sb, &isFirstDecl, indent)
 	this.writeStructDecl(&sb, &isFirstDecl, indent)
+	this.writeEnumMapDecl(&sb, &isFirstDecl, indent)
 
 	this.writeNamespaceDeclEnd(&sb)
 
@@ -305,7 +306,8 @@ func (this *CSharpCodeGenerator) writeEnumDecl(
 }
 
 func (this *CSharpCodeGenerator) writeOneEnumDecl(
-	sb *strings.Builder, enumDef *EnumDef, isFirstDecl *bool, indent string) {
+	sb *strings.Builder, enumDef *EnumDef,
+	isFirstDecl *bool, indent string) {
 
 	if *isFirstDecl == true {
 		*isFirstDecl = false
@@ -357,7 +359,8 @@ func (this *CSharpCodeGenerator) writeStructDecl(
 }
 
 func (this *CSharpCodeGenerator) writeOneStructDecl(
-	sb *strings.Builder, structDef *StructDef, isFirstDecl *bool, indent string) {
+	sb *strings.Builder, structDef *StructDef,
+	isFirstDecl *bool, indent string) {
 
 	if *isFirstDecl == true {
 		*isFirstDecl = false
@@ -378,6 +381,7 @@ func (this *CSharpCodeGenerator) writeOneStructDecl(
 	this.writeOneStructDeclCloneFunc(sb, structDef, indent)
 	this.writeOneStructDeclEncodeToStreamFunc(sb, structDef, indent)
 	this.writeOneStructDeclDecodeFromStreamFunc(sb, structDef, indent)
+	this.writeOneStructDeclDumpFunc(sb, structDef, indent)
 	this.writeOneStructDeclOptionalFunc(sb, structDef, indent)
 	this.writeLineFormat(sb,
 		"%s}",
@@ -849,6 +853,155 @@ func (this *CSharpCodeGenerator) writeOneStructDeclDecodeFromStreamFuncReadState
 	}
 }
 
+func (this *CSharpCodeGenerator) writeOneStructDeclDumpFunc(
+	sb *strings.Builder, structDef *StructDef, indent string) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"%s    public override string Dump()",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    {",
+		indent)
+
+	if len(structDef.Fields) <= 0 {
+		this.writeLineFormat(sb,
+			"%s        return \"\";",
+			indent)
+	} else {
+		this.writeLineFormat(sb,
+			"%s        List<string> sb = new List<string>();",
+			indent)
+		this.writeEmptyLine(sb)
+
+		for _, def := range structDef.Fields {
+			this.writeOneStructDeclDumpFuncWriteStatement(sb, def, indent)
+		}
+
+		this.writeEmptyLine(sb)
+		this.writeLineFormat(sb,
+			"%s        return string.Join(\" \", sb.ToArray());",
+			indent)
+	}
+
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclDumpFuncWriteStatement(
+	sb *strings.Builder, fieldDef *StructFieldDef, indent string) {
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"%s        if (has_%s()) {",
+			indent, fieldDef.Name)
+	}
+
+	isList := fieldDef.Type == StructFieldType_List
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	var writeStatement string
+	if StructFieldTypeIsInteger(checkType) {
+		if isList {
+			writeStatement = fmt.Sprintf(
+				"sb.Add(string.Format(\"%s: {0}\", this.%s[i]))",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(
+				"sb.Add(string.Format(\"%s: {0}\", this.%s))",
+				fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_String {
+		if isList {
+			writeStatement = fmt.Sprintf(
+				"sb.Add(string.Format(\"%s: \\\"{0}\\\"\", this.%s[i]))",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(
+				"sb.Add(string.Format(\"%s: \\\"{0}\\\"\", this.%s))",
+				fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_Bytes {
+		if isList {
+			writeStatement = fmt.Sprintf(""+
+				"sb.Add(string.Format(\"%s: \\\"{0}\\\"\", "+
+				"BitConverter.ToString(this.%s[i])))",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(""+
+				"sb.Add(string.Format(\"%s: \\\"{0}\\\"\", "+
+				"BitConverter.ToString(this.%s)))",
+				fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_Bool {
+		if isList {
+			writeStatement = fmt.Sprintf(
+				"sb.Add(string.Format(\"%s: {0}\", this.%s[i] ? 1 : 0))",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(
+				"sb.Add(string.Format(\"%s: {0}\", this.%s ? 1 : 0))",
+				fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_Enum {
+		if isList {
+			writeStatement = fmt.Sprintf(
+				"sb.Add(string.Format(\"%s: {0}\", (int)this.%s[i]))",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(
+				"sb.Add(string.Format(\"%s: {0}\", (int)this.%s))",
+				fieldDef.Name, fieldDef.Name)
+		}
+	} else if checkType == StructFieldType_Struct {
+		if isList {
+			writeStatement = fmt.Sprintf(
+				"sb.Add(string.Format(\"%s: {0}\", this.%s[i].Dump()))",
+				fieldDef.Name, fieldDef.Name)
+		} else {
+			writeStatement = fmt.Sprintf(
+				"sb.Add(string.Format(\"%s: {{ {0} }}\", this.%s.Dump()))",
+				fieldDef.Name, fieldDef.Name)
+		}
+	} else {
+		writeStatement = ""
+	}
+
+	var indent2 string
+	if fieldDef.IsOptional {
+		indent2 = "            "
+	} else {
+		indent2 = "        "
+	}
+	if isList {
+		this.writeLineFormat(sb,
+			"%s%sfor (int i = 0; i < this.%s.Count; ++i) {",
+			indent, indent2, fieldDef.Name)
+		this.writeLineFormat(sb,
+			"%s%s    %s;",
+			indent, indent2, writeStatement)
+		this.writeLineFormat(sb,
+			"%s%s}",
+			indent, indent2)
+	} else {
+		this.writeLineFormat(sb,
+			"%s%s%s;",
+			indent, indent2, writeStatement)
+	}
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"%s        }",
+			indent)
+	}
+}
+
 func (this *CSharpCodeGenerator) writeOneStructDeclOptionalFunc(
 	sb *strings.Builder, structDef *StructDef, indent string) {
 
@@ -924,4 +1077,162 @@ func (this *CSharpCodeGenerator) writeOneStructDeclOptionalFunc(
 			"%s    }",
 			indent)
 	}
+}
+
+func (this *CSharpCodeGenerator) writeEnumMapDecl(
+	sb *strings.Builder, isFirstDecl *bool, indent string) {
+
+	protoDef := this.descriptor.ProtoDef
+
+	for _, def := range protoDef.EnumMaps {
+		this.writeOneEnumMapDecl(sb, def, isFirstDecl, indent)
+	}
+}
+
+func (this *CSharpCodeGenerator) writeOneEnumMapDecl(
+	sb *strings.Builder, enumMapDef *EnumMapDef,
+	isFirstDecl *bool, indent string) {
+
+	if *isFirstDecl == true {
+		*isFirstDecl = false
+	} else {
+		this.writeEmptyLine(sb)
+	}
+
+	this.writeLineFormat(sb,
+		"%spublic sealed class %s",
+		indent, enumMapDef.Name)
+	this.writeLineFormat(sb,
+		"%s{",
+		indent)
+
+	for _, def := range enumMapDef.Items {
+		if def.Type == EnumMapItemType_Default ||
+			def.Type == EnumMapItemType_Int {
+			this.writeLineFormat(sb,
+				"%s    public const int %s = %d;",
+				indent, def.Name, def.IntValue)
+		} else if def.Type == EnumMapItemType_CurrentEnumRef {
+			this.writeLineFormat(sb,
+				"%s    public const int %s = %s;",
+				indent, def.Name, def.RefEnumItemDef.Name)
+		}
+	}
+	if len(enumMapDef.Items) > 0 {
+		this.writeEmptyLine(sb)
+	}
+
+	this.writeLineFormat(sb,
+		"%s    private static int[] s_id_list_ = {",
+		indent)
+	for _, def := range enumMapDef.Items {
+		if def.RefStructDef == nil {
+			continue
+		}
+		this.writeLineFormat(sb,
+			"%s        %s,",
+			indent, def.Name)
+	}
+	this.writeLineFormat(sb,
+		"%s    };",
+		indent)
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"%s    private static BaseStruct.CreateFunc[] s_create_func_list_ = {",
+		indent)
+	for _, def := range enumMapDef.Items {
+		if def.RefStructDef == nil {
+			continue
+		}
+		this.writeLineFormat(sb,
+			"%s        %s.Create,",
+			indent,
+			this.getStructFullQualifiedName(def.RefStructDef))
+	}
+	this.writeLineFormat(sb,
+		"%s    };",
+		indent)
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"%s    private class Id<T> where T : BaseStruct",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    {",
+		indent)
+	this.writeLineFormat(sb,
+		"%s        public static int Value;",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"%s    static %s()",
+		indent, enumMapDef.Name)
+	this.writeLineFormat(sb,
+		"%s    {",
+		indent)
+	for _, def := range enumMapDef.Items {
+		if def.RefStructDef == nil {
+			continue
+		}
+		this.writeLineFormat(sb,
+			"%s        Id<%s>.Value = %s;",
+			indent,
+			this.getStructFullQualifiedName(def.RefStructDef),
+			def.Name)
+	}
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+        "%s    public static int GetId<T>() where T : BaseStruct",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    {",
+		indent)
+	this.writeLineFormat(sb,
+		"%s        return Id<T>.Value;",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"%s    public static BaseStruct Create(int id)",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    {",
+		indent)
+	this.writeLineFormat(sb,
+		"%s        int index = Array.BinarySearch(s_id_list_, id);",
+		indent)
+	this.writeLineFormat(sb,
+		"%s        if (index < 0) {",
+		indent)
+	this.writeLineFormat(sb,
+		"%s            return null;",
+		indent)
+	this.writeLineFormat(sb,
+		"%s        } else {",
+		indent)
+	this.writeLineFormat(sb,
+		"%s            return s_create_func_list_[index]();",
+		indent)
+	this.writeLineFormat(sb,
+		"%s        }",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
+
+	this.writeLineFormat(sb,
+		"%s}",
+		indent)
 }
