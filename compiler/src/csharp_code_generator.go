@@ -635,47 +635,30 @@ func (this *CSharpCodeGenerator) writeOneStructDeclEncodeToStreamFuncWriteStatem
 		indent2 = "        "
 	}
 	if isList {
+		this.writeLineFormat(sb,
+			"%s%ss.WriteLength(this.%s.Count);",
+			indent, indent2, fieldDef.Name)
+		this.writeLineFormat(sb,
+			"%s%sfor (int i = 0; i < this.%s.Count; ++i) {",
+			indent, indent2, fieldDef.Name)
+
 		if checkType == StructFieldType_Enum {
-			this.writeLineFormat(sb,
-				"%s%ss.WriteLength(this.%s.Count);",
-				indent, indent2, fieldDef.Name)
-			this.writeLineFormat(sb,
-				"%s%sfor (int i = 0; i < this.%s.Count; ++i) {",
-				indent, indent2, fieldDef.Name)
 			this.writeLineFormat(sb,
 				"%s%s    s.WriteInt32V((int)this.%s[i]);",
 				indent, indent2, fieldDef.Name)
-			this.writeLineFormat(sb,
-				"%s%s}",
-				indent, indent2)
 		} else if checkType == StructFieldType_Struct {
-			this.writeLineFormat(sb,
-				"%s%ss.WriteLength(this.%s.Count);",
-				indent, indent2, fieldDef.Name)
-			this.writeLineFormat(sb,
-				"%s%sfor (int i = 0; i < this.%s.Count; ++i) {",
-				indent, indent2, fieldDef.Name)
 			this.writeLineFormat(sb,
 				"%s%s    this.%s[i].EncodeToStream(s);",
 				indent, indent2, fieldDef.Name)
-			this.writeLineFormat(sb,
-				"%s%s}",
-				indent, indent2)
 		} else {
-			this.writeLineFormat(sb,
-				"%s%ss.WriteLength(this.%s.Count);",
-				indent, indent2, fieldDef.Name)
-			this.writeLineFormat(sb,
-				"%s%sfor (int i = 0; i < this.%s.Count; ++i) {",
-				indent, indent2, fieldDef.Name)
 			this.writeLineFormat(sb,
 				"%s%s    s.%s(this.%s[i]);",
 				indent, indent2, writeFunc, fieldDef.Name)
-			this.writeLineFormat(sb,
-				"%s%s}",
-				indent, indent2)
 		}
 
+		this.writeLineFormat(sb,
+			"%s%s}",
+			indent, indent2)
 	} else {
 		if checkType == StructFieldType_Enum {
 			this.writeLineFormat(sb,
@@ -701,6 +684,169 @@ func (this *CSharpCodeGenerator) writeOneStructDeclEncodeToStreamFuncWriteStatem
 
 func (this *CSharpCodeGenerator) writeOneStructDeclDecodeFromStreamFunc(
 	sb *strings.Builder, structDef *StructDef, indent string) {
+
+	this.writeEmptyLine(sb)
+	this.writeLineFormat(sb,
+		"%s    public override void DecodeFromStream(CodecInputStream s)",
+		indent)
+	this.writeLineFormat(sb,
+		"%s    {",
+		indent)
+
+	if structDef.OptionalByteCount > 0 {
+		this.writeLineFormat(sb,
+			"%s        for (int i = 0; i < %d; ++i) {",
+			indent, structDef.OptionalByteCount)
+		this.writeLineFormat(sb,
+			"%s            this._has_bits_[i] = s.ReadUInt8();",
+			indent)
+		this.writeLineFormat(sb,
+			"%s        }",
+			indent)
+		this.writeEmptyLine(sb)
+	}
+
+	for _, def := range structDef.Fields {
+		this.writeOneStructDeclDecodeFromStreamFuncReadStatement(
+			sb, def, indent)
+	}
+
+	this.writeLineFormat(sb,
+		"%s    }",
+		indent)
+}
+
+func (this *CSharpCodeGenerator) writeOneStructDeclDecodeFromStreamFuncReadStatement(
+	sb *strings.Builder, fieldDef *StructFieldDef, indent string) {
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"%s        if (has_%s()) {",
+			indent, fieldDef.Name)
+	}
+
+	isList := fieldDef.Type == StructFieldType_List
+	var checkType StructFieldType
+	if fieldDef.Type == StructFieldType_List {
+		checkType = fieldDef.ListType
+	} else {
+		checkType = fieldDef.Type
+	}
+
+	var readFunc string
+	if checkType == StructFieldType_I8 {
+		readFunc = "ReadInt8"
+	} else if checkType == StructFieldType_U8 {
+		readFunc = "ReadUInt8"
+	} else if checkType == StructFieldType_I16 {
+		readFunc = "ReadInt16"
+	} else if checkType == StructFieldType_U16 {
+		readFunc = "ReadUInt16"
+	} else if checkType == StructFieldType_I32 {
+		readFunc = "ReadInt32"
+	} else if checkType == StructFieldType_U32 {
+		readFunc = "ReadUInt32"
+	} else if checkType == StructFieldType_I64 {
+		readFunc = "ReadInt64"
+	} else if checkType == StructFieldType_U64 {
+		readFunc = "ReadUInt64"
+	} else if checkType == StructFieldType_I16V {
+		readFunc = "ReadInt16V"
+	} else if checkType == StructFieldType_U16V {
+		readFunc = "ReadUInt16V"
+	} else if checkType == StructFieldType_I32V {
+		readFunc = "ReadInt32V"
+	} else if checkType == StructFieldType_U32V {
+		readFunc = "ReadUInt32V"
+	} else if checkType == StructFieldType_I64V {
+		readFunc = "ReadInt64V"
+	} else if checkType == StructFieldType_U64V {
+		readFunc = "ReadUInt64V"
+	} else if checkType == StructFieldType_String {
+		readFunc = "ReadString"
+	} else if checkType == StructFieldType_Bytes {
+		readFunc = "ReadBytes"
+	} else if checkType == StructFieldType_Bool {
+		readFunc = "ReadBool"
+	} else {
+		readFunc = ""
+	}
+
+	var indent2 string
+	if fieldDef.IsOptional {
+		indent2 = "            "
+	} else {
+		indent2 = "        "
+	}
+	if isList {
+		var indent3 string
+		if fieldDef.IsOptional == false {
+			indent3 = "    "
+		} else {
+			indent3 = ""
+		}
+		if fieldDef.IsOptional == false {
+			this.writeLineFormat(sb,
+				"%s%s{",
+				indent, indent2)
+		}
+		this.writeLineFormat(sb,
+			"%s%s%sint length = s.ReadLength();",
+			indent, indent2, indent3)
+		this.writeLineFormat(sb,
+			"%s%s%sthis.%s.Clear();",
+			indent, indent2, indent3, fieldDef.Name)
+		this.writeLineFormat(sb,
+			"%s%s%sfor (int i = 0; i < length; ++i) {",
+			indent, indent2, indent3)
+
+		if checkType == StructFieldType_Enum {
+			this.writeLineFormat(sb,
+				"%s%s%s    this.%s.Add((%s)s.ReadInt32V());",
+				indent, indent2, indent3, fieldDef.Name,
+				this.getEnumFullQualifiedName(fieldDef.RefEnumDef))
+		} else if checkType == StructFieldType_Struct {
+			this.writeLineFormat(sb,
+				"%s%s%s    this.%s.Add(s.ReadStruct<%s>());",
+				indent, indent2, indent3, fieldDef.Name,
+				this.getStructFullQualifiedName(fieldDef.RefStructDef))
+		} else {
+			this.writeLineFormat(sb,
+				"%s%s%s    this.%s.Add(s.%s());",
+				indent, indent2, indent3, fieldDef.Name, readFunc)
+		}
+
+		this.writeLineFormat(sb,
+			"%s%s%s}",
+			indent, indent2, indent3)
+		if fieldDef.IsOptional == false {
+			this.writeLineFormat(sb,
+				"%s%s}",
+				indent, indent2)
+		}
+	} else {
+		if checkType == StructFieldType_Enum {
+			this.writeLineFormat(sb,
+				"%s%sthis.%s = (%s)s.ReadInt32V();",
+				indent, indent2, fieldDef.Name,
+				this.getEnumFullQualifiedName(fieldDef.RefEnumDef))
+		} else if checkType == StructFieldType_Struct {
+			this.writeLineFormat(sb,
+				"%s%sthis.%s = s.ReadStruct<%s>();",
+				indent, indent2, fieldDef.Name,
+				this.getStructFullQualifiedName(fieldDef.RefStructDef))
+		} else {
+			this.writeLineFormat(sb,
+				"%s%sthis.%s = s.%s();",
+				indent, indent2, fieldDef.Name, readFunc)
+		}
+	}
+
+	if fieldDef.IsOptional {
+		this.writeLineFormat(sb,
+			"%s        }",
+			indent)
+	}
 }
 
 func (this *CSharpCodeGenerator) writeOneStructDeclOptionalFunc(
