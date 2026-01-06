@@ -1191,7 +1191,7 @@ func (this *CSharpCodeGenerator) writeOneEnumMapDecl(
 
 	this.writeEmptyLine(sb)
 	this.writeLineFormat(sb,
-        "%s    public static int GetId<T>() where T : BaseStruct",
+		"%s    public static int GetId<T>() where T : BaseStruct",
 		indent)
 	this.writeLineFormat(sb,
 		"%s    {",
