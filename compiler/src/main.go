@@ -89,7 +89,7 @@ func main() {
 	}
 
 	// create parser
-	parser := new(ProtocolParser)
+	parser := NewProtocolParser()
 	if parser.Parse(optProtoFilePath, optSearchPath) == false {
 		os.Exit(1)
 	}

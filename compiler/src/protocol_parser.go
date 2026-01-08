@@ -13,6 +13,12 @@ type ProtocolParser struct {
 	Descriptor *ProtocolDescriptor
 }
 
+func NewProtocolParser() *ProtocolParser {
+	newObj := new(ProtocolParser)
+
+	return newObj
+}
+
 func (this *ProtocolParser) Close() {
 	if this.Descriptor != nil {
 		this.Descriptor.Close()
