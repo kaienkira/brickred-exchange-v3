@@ -962,7 +962,7 @@ func (this *CSharpCodeGenerator) writeOneStructDeclDumpFuncWriteStatement(
 	} else if checkType == StructFieldType_Struct {
 		if isList {
 			writeStatement = fmt.Sprintf(
-				"sb.Add(string.Format(\"%s: {0}\", this.%s[i].Dump()))",
+				"sb.Add(string.Format(\"%s: {{ {0} }}\", this.%s[i].Dump()))",
 				fieldDef.Name, fieldDef.Name)
 		} else {
 			writeStatement = fmt.Sprintf(
