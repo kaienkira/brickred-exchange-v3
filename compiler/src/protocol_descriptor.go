@@ -16,8 +16,8 @@ func NewProtocolDescriptor() *ProtocolDescriptor {
 
 func (this *ProtocolDescriptor) Close() {
 	if this.ImportedProtos != nil {
-		for _, protoDef := range this.ImportedProtos {
-			protoDef.Close()
+		for _, def := range this.ImportedProtos {
+			def.Close()
 		}
 		clear(this.ImportedProtos)
 		this.ImportedProtos = nil
