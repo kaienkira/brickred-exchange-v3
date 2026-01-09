@@ -272,8 +272,8 @@ func (this *EnumDef) Close() {
 		this.ItemNameIndex = nil
 	}
 	if this.Items != nil {
-		for _, item := range this.Items {
-			item.Close()
+		for _, def := range this.Items {
+			def.Close()
 		}
 		clear(this.Items)
 		this.Items = nil
@@ -383,8 +383,8 @@ func (this *StructDef) Close() {
 		this.FieldNameIndex = nil
 	}
 	if this.Fields != nil {
-		for _, item := range this.Fields {
-			item.Close()
+		for _, def := range this.Fields {
+			def.Close()
 		}
 		clear(this.Fields)
 		this.Fields = nil
@@ -482,8 +482,8 @@ func (this *EnumMapDef) Close() {
 		this.ItemNameIndex = nil
 	}
 	if this.Items != nil {
-		for _, item := range this.Items {
-			item.Close()
+		for _, def := range this.Items {
+			def.Close()
 		}
 		clear(this.Items)
 		this.Items = nil
