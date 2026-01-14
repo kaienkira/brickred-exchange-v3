@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func utilAtoi(str string) int {
+func UtilAtoi(str string) int {
 	i, err := strconv.Atoi(str)
 	if err != nil {
 		return 0
@@ -17,7 +17,7 @@ func utilAtoi(str string) int {
 	}
 }
 
-func utilGetFileNameWithoutExtension(filePath string) string {
+func UtilGetFileNameWithoutExtension(filePath string) string {
 	base := filepath.Base(filePath)
 	ext := filepath.Ext(base)
 	if ext == "" {
@@ -27,7 +27,7 @@ func utilGetFileNameWithoutExtension(filePath string) string {
 	}
 }
 
-func utilGetFullPath(filePath string) string {
+func UtilGetFullPath(filePath string) string {
 	fullPath, err := filepath.Abs(filePath)
 	if err != nil {
 		return ""
@@ -36,7 +36,7 @@ func utilGetFullPath(filePath string) string {
 	}
 }
 
-func utilCheckFileExists(filePath string) bool {
+func UtilCheckFileExists(filePath string) bool {
 	info, err := os.Stat(filePath)
 	if err != nil {
 		return false
@@ -48,7 +48,7 @@ func utilCheckFileExists(filePath string) bool {
 	return true
 }
 
-func utilCheckDirExists(dirPath string) bool {
+func UtilCheckDirExists(dirPath string) bool {
 	info, err := os.Stat(dirPath)
 	if err != nil {
 		return false
@@ -60,7 +60,7 @@ func utilCheckDirExists(dirPath string) bool {
 	return true
 }
 
-func utilWriteAllText(filePath string, fileContent string) bool {
+func UtilWriteAllText(filePath string, fileContent string) bool {
 	err := os.WriteFile(filePath, []byte(fileContent), 0644)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,

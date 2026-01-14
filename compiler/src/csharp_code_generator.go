@@ -29,7 +29,7 @@ func (this *CSharpCodeGenerator) Generate(
 	sourceFilePath := filepath.Join(
 		outputDir, this.descriptor.ProtoDef.Name+".cs")
 	sourceFileContent := this.generateSourceFile()
-	if utilWriteAllText(sourceFilePath, sourceFileContent) == false {
+	if UtilWriteAllText(sourceFilePath, sourceFileContent) == false {
 		return false
 	}
 

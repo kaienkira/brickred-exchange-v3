@@ -29,7 +29,7 @@ func (this *PhpCodeGenerator) Generate(
 	sourceFilePath := filepath.Join(
 		outputDir, this.descriptor.ProtoDef.Name+".php")
 	sourceFileContent := this.generateSourceFile()
-	if utilWriteAllText(sourceFilePath, sourceFileContent) == false {
+	if UtilWriteAllText(sourceFilePath, sourceFileContent) == false {
 		return false
 	}
 

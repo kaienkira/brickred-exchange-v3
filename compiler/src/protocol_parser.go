@@ -81,13 +81,13 @@ func (this *ProtocolParser) getProtoFileFullPath(
 
 	fileExists := false
 	// find proto file path directly first
-	if utilCheckFileExists(protoFilePath) {
+	if UtilCheckFileExists(protoFilePath) {
 		fileExists = true
 	} else {
 		// find in the search path
 		for _, path := range protoSearchPath {
 			checkPath := filepath.Join(path, protoFilePath)
-			if utilCheckFileExists(checkPath) {
+			if UtilCheckFileExists(checkPath) {
 				fileExists = true
 				protoFilePath = checkPath
 				break
@@ -96,7 +96,7 @@ func (this *ProtocolParser) getProtoFileFullPath(
 	}
 
 	if fileExists {
-		return utilGetFullPath(protoFilePath)
+		return UtilGetFullPath(protoFilePath)
 	} else {
 		return ""
 	}
@@ -133,7 +133,7 @@ func (this *ProtocolParser) parseProtocol(
 	var protoDef *ProtocolDef = nil
 
 	// check is already imported
-	protoName := utilGetFileNameWithoutExtension(protoFilePath)
+	protoName := UtilGetFileNameWithoutExtension(protoFilePath)
 	if protoDef, ok := this.Descriptor.ImportedProtos[protoName]; ok {
 		return protoDef
 	}
@@ -181,7 +181,7 @@ func (this *ProtocolParser) parseProtocol(
 		for _, node := range nodes {
 			// check import self
 			refProtoPath := node.InnerText()
-			refProtoName := utilGetFileNameWithoutExtension(refProtoPath)
+			refProtoName := UtilGetFileNameWithoutExtension(refProtoPath)
 			if refProtoName == protoName {
 				this.printNodeError(protoDef, node,
 					"can not import self")
@@ -423,7 +423,7 @@ func (this *ProtocolParser) addEnumItemDef(
 	} else if this.isStrNumber(value) {
 		// int
 		def.Type = EnumItemType_Int
-		def.IntValue = utilAtoi(value)
+		def.IntValue = UtilAtoi(value)
 	} else {
 		parts := strings.Split(value, ".")
 		partsLen := len(parts)
@@ -827,7 +827,7 @@ func (this *ProtocolParser) addEnumMapItemDef(
 	} else if this.isStrNumber(value) {
 		// int
 		def.Type = EnumMapItemType_Int
-		def.IntValue = utilAtoi(value)
+		def.IntValue = UtilAtoi(value)
 	} else {
 		// current enum
 		refDef, ok := enumMapDef.ItemNameIndex[value]

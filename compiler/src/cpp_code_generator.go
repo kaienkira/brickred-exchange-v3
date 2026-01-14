@@ -30,14 +30,14 @@ func (this *CppCodeGenerator) Generate(
 	headerFilePath := filepath.Join(
 		outputDir, this.descriptor.ProtoDef.Name+".h")
 	headerFileContent := this.generateHeaderFile()
-	if utilWriteAllText(headerFilePath, headerFileContent) == false {
+	if UtilWriteAllText(headerFilePath, headerFileContent) == false {
 		return false
 	}
 
 	sourceFilePath := filepath.Join(
 		outputDir, this.descriptor.ProtoDef.Name+".cc")
 	sourceFileContent := this.generateSourceFile()
-	if utilWriteAllText(sourceFilePath, sourceFileContent) == false {
+	if UtilWriteAllText(sourceFilePath, sourceFileContent) == false {
 		return false
 	}
 

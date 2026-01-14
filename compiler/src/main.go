@@ -55,7 +55,7 @@ func main() {
 	}
 
 	// -- check option proto_file_path
-	if utilCheckFileExists(optProtoFilePath) == false {
+	if UtilCheckFileExists(optProtoFilePath) == false {
 		fmt.Fprintf(os.Stderr,
 			"error: can not find protocol file `%s`\n",
 			optProtoFilePath)
@@ -73,7 +73,7 @@ func main() {
 	}
 
 	// -- check option output_dir
-	if utilCheckDirExists(optOutputDir) == false {
+	if UtilCheckDirExists(optOutputDir) == false {
 		fmt.Fprintf(os.Stderr,
 			"error: can not find output directory `%s`\n",
 			optOutputDir)
