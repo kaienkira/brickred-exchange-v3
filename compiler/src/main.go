@@ -45,6 +45,7 @@ func main() {
 		printUsage()
 		os.Exit(1)
 	}
+
 	// -- option default value
 	if optOutputDir == "" {
 		optOutputDir = "."
