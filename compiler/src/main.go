@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	flag "github.com/spf13/pflag"
 	"os"
 	"path/filepath"
+
+	flag "github.com/spf13/pflag"
 )
 
 func printUsage() {

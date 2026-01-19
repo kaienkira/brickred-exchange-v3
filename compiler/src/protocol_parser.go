@@ -103,7 +103,6 @@ func (this *ProtocolParser) getProtoFileFullPath(
 }
 
 func (this *ProtocolParser) loadProtoFile(filePath string) *xmlquery.Node {
-
 	fileBin, err := os.ReadFile(filePath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
