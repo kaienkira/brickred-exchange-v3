@@ -22,7 +22,7 @@ func printUsage() {
 		filepath.Base(os.Args[0]))
 }
 
-func main() {
+func run() int {
 	// parse command line options
 	var optHelp bool
 	var optProtoFilePath string
@@ -41,11 +41,11 @@ func main() {
 
 	if flagSet.Parse(os.Args[1:]) != nil {
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
 	if optHelp {
 		printUsage()
-		os.Exit(0)
+		return 0
 	}
 
 	// check command line options
@@ -53,7 +53,7 @@ func main() {
 	if optProtoFilePath == "" ||
 		optLanguage == "" {
 		printUsage()
-		os.Exit(1)
+		return 1
 	}
 
 	// -- option default value
@@ -69,7 +69,7 @@ func main() {
 		fmt.Fprintf(os.Stderr,
 			"error: can not find protocol file `%s`\n",
 			optProtoFilePath)
-		os.Exit(1)
+		return 1
 	}
 
 	// -- check option language
@@ -79,7 +79,7 @@ func main() {
 		fmt.Fprintf(os.Stderr,
 			"error: language `%s` is not supported\n",
 			optLanguage)
-		os.Exit(1)
+		return 1
 	}
 
 	// -- check option output_dir
@@ -87,7 +87,7 @@ func main() {
 		fmt.Fprintf(os.Stderr,
 			"error: can not find output directory `%s`\n",
 			optOutputDir)
-		os.Exit(1)
+		return 1
 	}
 
 	// -- check option new_line_type
@@ -96,13 +96,13 @@ func main() {
 		fmt.Fprintf(os.Stderr,
 			"error: new_line_type `%s` is invalid\n",
 			optNewLineType)
-		os.Exit(1)
+		return 1
 	}
 
 	// create parser
 	parser := NewProtocolParser()
 	if parser.Parse(optProtoFilePath, optSearchPath) == false {
-		os.Exit(1)
+		return 1
 	}
 	defer parser.Close()
 
@@ -115,7 +115,7 @@ func main() {
 	} else if optLanguage == "csharp" {
 		generator = NewCSharpCodeGenerator()
 	} else {
-		os.Exit(1)
+		return 1
 	}
 	defer generator.Close()
 
@@ -126,8 +126,12 @@ func main() {
 	}
 	if generator.Generate(parser.Descriptor,
 		optOutputDir, newLineType) == false {
-		os.Exit(1)
+		return 1
 	}
 
-	os.Exit(0)
+	return 0
+}
+
+func main() {
+	os.Exit(run())
 }

@@ -311,7 +311,8 @@ func (this *CppCodeGenerator) writeHeaderFileIncludeFileDecl(
 		useCStdIntH == false &&
 		useStringH == false &&
 		useVectorH == false &&
-		useBrickredBaseStructH == false {
+		useBrickredBaseStructH == false &&
+		useOtherProtoH == false {
 		return
 	}
 
