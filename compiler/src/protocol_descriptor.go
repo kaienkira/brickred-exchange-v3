@@ -22,8 +22,9 @@ func (this *ProtocolDescriptor) Close() {
 		clear(this.ImportedProtos)
 		this.ImportedProtos = nil
 	}
+	// already call Close() in ImportedProtos
+	// this.ProtoDef don't have ownership
 	if this.ProtoDef != nil {
-		this.ProtoDef.Close()
 		this.ProtoDef = nil
 	}
 }

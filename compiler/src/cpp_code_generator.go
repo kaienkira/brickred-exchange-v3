@@ -300,6 +300,7 @@ func (this *CppCodeGenerator) writeHeaderFileIncludeFileDecl(
 
 	for _, importDef := range protoDef.Imports {
 		if importDef.IsRefByStruct == false &&
+			importDef.IsRefByEnum == false &&
 			importDef.IsRefByEnumMap {
 			continue
 		}
@@ -669,6 +670,7 @@ func (this *CppCodeGenerator) writeSourceFileIncludeFileDecl(
 
 	for _, importDef := range protoDef.Imports {
 		if (importDef.IsRefByStruct == false &&
+			importDef.IsRefByEnum == false &&
 			importDef.IsRefByEnumMap) == false {
 			continue
 		} else {
@@ -713,6 +715,7 @@ func (this *CppCodeGenerator) writeSourceFileIncludeFileDecl(
 	}
 	for _, importDef := range protoDef.Imports {
 		if (importDef.IsRefByStruct == false &&
+			importDef.IsRefByEnum == false &&
 			importDef.IsRefByEnumMap) == false {
 			continue
 		}
@@ -1311,6 +1314,17 @@ func (this *CppCodeGenerator) writeSourceFileOneEnumMapImplCreateFunc(
 		enumMapDef.Name)
 	this.writeLine(sb,
 		"{")
+
+	// c++ don't support zero-length array in standard
+	// so here just return nullptr to
+	// prevent declare zero-length id_list & create_func_list
+	if len(enumMapDef.IdToStructIndex) <= 0 {
+		this.writeLine(sb,
+			"    return nullptr;")
+		this.writeLine(sb,
+			"}")
+		return
+	}
 
 	this.writeLine(sb,
 		"    static constexpr int id_list[] = {")

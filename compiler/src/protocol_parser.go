@@ -169,8 +169,9 @@ func (this *ProtocolParser) parseProtocol(
 	if rootNode == nil ||
 		rootNode.Type != xmlquery.ElementNode ||
 		rootNode.Data != "protocol" {
-		this.printNodeError(protoDef, rootNode,
-			"root node must be `protocol` node")
+		fmt.Fprintf(os.Stderr,
+			"error:%s: root node must be `protocol` node",
+			protoDef.FilePath)
 		return nil
 	}
 

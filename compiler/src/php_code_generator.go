@@ -467,7 +467,7 @@ func (this *PhpCodeGenerator) writeOneStructDeclDecodeFunc(
 				"        for ($i = 0; $i < %d; ++$i) {",
 				structDef.OptionalByteCount)
 			this.writeLine(sb,
-				"            $this->_has_bits_[$i] = Codec::readUint8($s);")
+				"            $this->_has_bits_[$i] = Codec::readUInt8($s);")
 			this.writeLine(sb,
 				"        }")
 			this.writeEmptyLine(sb)
