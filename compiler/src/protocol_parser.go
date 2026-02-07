@@ -469,12 +469,13 @@ func (this *ProtocolParser) addEnumItemDef(
 			refEnumDefName := parts[1]
 			refDefName := parts[2]
 
-			refProtoDef, ok := this.Descriptor.ImportedProtos[refProtoDefName]
+			refImportDef, ok := protoDef.ImportNameIndex[refProtoDefName]
 			if ok == false {
 				this.printNodeError(protoDef, node,
 					"protocol `%s` is undefined", refProtoDefName)
 				return false
 			}
+			refProtoDef := refImportDef.ProtoDef
 			refEnumDef, ok := refProtoDef.EnumNameIndex[refEnumDefName]
 			if ok == false {
 				this.printNodeError(protoDef, node,
@@ -668,12 +669,13 @@ func (this *ProtocolParser) addStructFieldDef(
 			// in other file
 			refProtoDefName := parts[0]
 			ok := false
-			refProtoDef, ok = this.Descriptor.ImportedProtos[refProtoDefName]
+			refImportDef, ok := protoDef.ImportNameIndex[refProtoDefName]
 			if ok == false {
 				this.printNodeError(protoDef, node,
 					"protocol `%s` is undefined", refProtoDefName)
 				return false
 			}
+			refProtoDef = refImportDef.ProtoDef
 			refDefName = parts[1]
 
 		} else {
@@ -866,12 +868,13 @@ func (this *ProtocolParser) addEnumMapItemDef(
 			// in other file
 			refProtoDefName := parts[0]
 			ok := false
-			refProtoDef, ok = this.Descriptor.ImportedProtos[refProtoDefName]
+			refImportDef, ok := protoDef.ImportNameIndex[refProtoDefName]
 			if ok == false {
 				this.printNodeError(protoDef, node,
 					"protocol `%s` is undefined", refProtoDefName)
 				return false
 			}
+			refProtoDef = refImportDef.ProtoDef
 			refDefName = parts[1]
 
 		} else {
