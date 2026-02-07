@@ -64,7 +64,7 @@ func UtilWriteAllText(filePath string, fileContent string) bool {
 	err := os.WriteFile(filePath, []byte(fileContent), 0644)
 	if err != nil {
 		fmt.Fprintf(os.Stderr,
-			"error: write file %s failed: %s",
+			"error: write file %s failed: %s\n",
 			filePath, err.Error())
 		return false
 	}
