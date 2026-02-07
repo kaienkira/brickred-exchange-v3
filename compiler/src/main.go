@@ -24,6 +24,7 @@ func printUsage() {
 
 func main() {
 	// parse command line options
+	var optHelp bool
 	var optProtoFilePath string
 	var optLanguage string
 	var optOutputDir string
@@ -31,13 +32,21 @@ func main() {
 	var optNewLineType string
 
 	flagSet := flag.NewFlagSet("main", flag.ContinueOnError)
-	flagSet.BoolP("help", "h", false, "")
+	flagSet.BoolVarP(&optHelp, "help", "h", false, "")
 	flagSet.StringVarP(&optProtoFilePath, "-proto_file_path", "f", "", "")
 	flagSet.StringVarP(&optLanguage, "-language", "l", "", "")
 	flagSet.StringVarP(&optOutputDir, "-output_dir", "o", "", "")
 	flagSet.StringSliceVarP(&optSearchPath, "-search_path", "I", []string{}, "")
 	flagSet.StringVarP(&optNewLineType, "-new_line_type", "n", "", "")
-	flagSet.Parse(os.Args[1:])
+
+	if flagSet.Parse(os.Args[1:]) != nil {
+		printUsage()
+		os.Exit(1)
+	}
+	if optHelp {
+		printUsage()
+		os.Exit(0)
+	}
 
 	// check command line options
 	// -- required options

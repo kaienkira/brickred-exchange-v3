@@ -966,7 +966,7 @@ func (this *ProtocolParser) processImportedProtocols(
 		// check imported protocol is used
 		if _, ok := usedProtos[protoName]; ok == false {
 			fmt.Fprintf(os.Stderr,
-				"warning:%s:%d: protocol `%s` is not used but imported",
+				"warning:%s:%d: protocol `%s` is not used but imported\n",
 				protoDef.FilePath, importDef.LineNumber, importDef.Name)
 		}
 

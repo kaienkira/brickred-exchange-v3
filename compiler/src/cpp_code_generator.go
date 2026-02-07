@@ -299,9 +299,8 @@ func (this *CppCodeGenerator) writeHeaderFileIncludeFileDecl(
 	}
 
 	for _, importDef := range protoDef.Imports {
-		if importDef.IsRefByStruct == false &&
-			importDef.IsRefByEnum == false &&
-			importDef.IsRefByEnumMap {
+		if importDef.IsRefByEnum == false &&
+			importDef.IsRefByStruct == false {
 			continue
 		}
 		useOtherProtoH = true
@@ -344,9 +343,8 @@ func (this *CppCodeGenerator) writeHeaderFileIncludeFileDecl(
 			"#include <brickred/exchange/base_struct.h>")
 	}
 	for _, importDef := range protoDef.Imports {
-		if importDef.IsRefByStruct == false &&
-			importDef.IsRefByEnum == false &&
-			importDef.IsRefByEnumMap {
+		if importDef.IsRefByEnum == false &&
+			importDef.IsRefByStruct == false {
 			continue
 		}
 		this.writeLineFormat(sb,
@@ -670,9 +668,9 @@ func (this *CppCodeGenerator) writeSourceFileIncludeFileDecl(
 	}
 
 	for _, importDef := range protoDef.Imports {
-		if (importDef.IsRefByStruct == false &&
+		if importDef.IsRefByEnumMap &&
 			importDef.IsRefByEnum == false &&
-			importDef.IsRefByEnumMap) == false {
+			importDef.IsRefByStruct == false {
 			continue
 		} else {
 			useOtherProtoH = true
@@ -715,9 +713,9 @@ func (this *CppCodeGenerator) writeSourceFileIncludeFileDecl(
 			"#include <brickred/exchange/macro_internal.h>")
 	}
 	for _, importDef := range protoDef.Imports {
-		if (importDef.IsRefByStruct == false &&
+		if importDef.IsRefByEnumMap &&
 			importDef.IsRefByEnum == false &&
-			importDef.IsRefByEnumMap) == false {
+			importDef.IsRefByStruct == false {
 			continue
 		}
 		this.writeLineFormat(sb,
