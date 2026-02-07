@@ -345,6 +345,7 @@ func (this *CppCodeGenerator) writeHeaderFileIncludeFileDecl(
 	}
 	for _, importDef := range protoDef.Imports {
 		if importDef.IsRefByStruct == false &&
+			importDef.IsRefByEnum == false &&
 			importDef.IsRefByEnumMap {
 			continue
 		}

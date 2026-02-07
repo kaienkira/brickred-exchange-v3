@@ -67,9 +67,10 @@ func (this *ProtocolParser) printNodeError(
 func (this *ProtocolParser) getNodeAttr(
 	node *xmlquery.Node, attrName string) *xmlquery.Attr {
 
-	for _, attr := range node.Attr {
+	for i := range node.Attr {
+		attr := &node.Attr[i]
 		if attr.Name.Local == attrName {
-			return &attr
+			return attr
 		}
 	}
 
@@ -133,8 +134,8 @@ func (this *ProtocolParser) parseProtocol(
 
 	// check is already imported
 	protoName := UtilGetFileNameWithoutExtension(protoFilePath)
-	if protoDef, ok := this.Descriptor.ImportedProtos[protoName]; ok {
-		return protoDef
+	if protoDefImported, ok := this.Descriptor.ImportedProtos[protoName]; ok {
+		return protoDefImported
 	}
 
 	// get file full path
