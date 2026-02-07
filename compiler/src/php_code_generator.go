@@ -192,11 +192,17 @@ func (this *PhpCodeGenerator) writeUseStatementsDecl(
 			useBrickredExchangeCodec = true
 		}
 		for _, def := range structDef.Fields {
-			if def.Type == StructFieldType_I64 ||
-				def.Type == StructFieldType_I64V {
+			var checkType StructFieldType
+			if def.Type == StructFieldType_List {
+				checkType = def.ListType
+			} else {
+				checkType = def.Type
+			}
+			if checkType == StructFieldType_I64 ||
+				checkType == StructFieldType_I64V {
 				useBrickredExchangeInt64 = true
-			} else if def.Type == StructFieldType_U64 ||
-				def.Type == StructFieldType_U64V {
+			} else if checkType == StructFieldType_U64 ||
+				checkType == StructFieldType_U64V {
 				useBrickredExchangeUInt64 = true
 			}
 		}

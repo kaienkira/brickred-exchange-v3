@@ -233,8 +233,13 @@ func (this *CSharpCodeGenerator) writeUseStatementsDecl(
 			useSystemCollectionsGeneric = true
 		}
 		for _, def := range structDef.Fields {
-			if def.Type == StructFieldType_Bytes ||
-				def.ListType == StructFieldType_Bytes {
+			var checkType StructFieldType
+			if def.Type == StructFieldType_List {
+				checkType = def.ListType
+			} else {
+				checkType = def.Type
+			}
+			if checkType == StructFieldType_Bytes {
 				// for BitConverter
 				useSystem = true
 			}
