@@ -170,7 +170,7 @@ func (this *ProtocolParser) parseProtocol(
 		rootNode.Type != xmlquery.ElementNode ||
 		rootNode.Data != "protocol" {
 		fmt.Fprintf(os.Stderr,
-			"error:%s: root node must be `protocol` node",
+			"error:%s: root node must be `protocol` node\n",
 			protoDef.FilePath)
 		return nil
 	}
