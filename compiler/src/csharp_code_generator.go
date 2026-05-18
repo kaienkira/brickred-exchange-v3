@@ -170,6 +170,16 @@ func (this *CSharpCodeGenerator) getStructFieldCSharpTypeDefaultValue(
 	}
 }
 
+func (this *CSharpCodeGenerator) getIndent() string {
+	protoDef := this.descriptor.ProtoDef
+
+	if _, ok := protoDef.Namespaces["csharp"]; ok {
+		return "    "
+	} else {
+		return ""
+	}
+}
+
 func (this *CSharpCodeGenerator) generateSourceFile() string {
 	var sb strings.Builder
 
@@ -199,16 +209,6 @@ func (this *CSharpCodeGenerator) writeDontEditComment(
 		" * Do not edit unless you are sure that you know what you are doing.")
 	this.writeLine(sb,
 		" */")
-}
-
-func (this *CSharpCodeGenerator) getIndent() string {
-	protoDef := this.descriptor.ProtoDef
-
-	if _, ok := protoDef.Namespaces["csharp"]; ok {
-		return "    "
-	} else {
-		return ""
-	}
 }
 
 func (this *CSharpCodeGenerator) writeUseStatementsDecl(
