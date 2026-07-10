@@ -1,5 +1,5 @@
 BUILD_DEBUG_FLAGS = -gcflags="all=-N -l"
-BUILD_RELEASE_FLAGS = -trimpath -ldflags="-s -w"
+BUILD_RELEASE_FLAGS = -buildvcs=false -trimpath -ldflags="-s -w"
 
 build:
 	@cd src && go build -o ../bin/brexc
