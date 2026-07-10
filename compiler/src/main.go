@@ -101,10 +101,10 @@ func run() int {
 
 	// create parser
 	parser := NewProtocolParser()
+	defer parser.Close()
 	if parser.Parse(optProtoFilePath, optSearchPath) == false {
 		return 1
 	}
-	defer parser.Close()
 
 	// create generator
 	var generator CodeGenerator = nil
