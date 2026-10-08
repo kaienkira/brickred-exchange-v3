@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Brickred.Exchange
 {
@@ -209,6 +210,24 @@ namespace Brickred.Exchange
         public void WriteStruct<T>(T val) where T : BaseStruct
         {
             val.EncodeToStream(this);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ushort ZigzagEncode16(short val)
+        {
+            return unchecked((ushort)((val << 1) ^ (val >> 15)));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static uint ZigzagEncode32(int val)
+        {
+            return unchecked((uint)((val << 1) ^ (val >> 31)));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static ulong ZigzagEncode64(long val)
+        {
+            return unchecked((ulong)((val << 1) ^ (val >> 63)));
         }
     }
 }

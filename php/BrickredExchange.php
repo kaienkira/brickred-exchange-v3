@@ -164,9 +164,24 @@ final class Codec
         if (is_string($var)) {
             $var = (float)$var;
         }
-        $var &= 0xffffffff;
-        if ($var > 2147483647) {
-            $var -= 4294967296;
+
+        if (is_float($var)) {
+            $var = $var >= 0 ? floor($var) : ceil($var);
+            $var = fmod($var, 4294967296.0);
+            if ($var < 0) {
+                $var += 4294967296.0;
+            }
+            if ($var > 2147483647.0) {
+                $var -= 4294967296.0;
+            }
+            return (int)$var;
+        }
+
+        if (PHP_INT_SIZE === 8) {
+            $var &= 0xffffffff;
+            if ($var > 2147483647) {
+                $var -= 4294967296;
+            }
         }
 
         return (int)$var;
@@ -405,7 +420,7 @@ final class Codec
 
     public static function writeInt16V($var)
     {
-        $var = $var & 0xffff;
+        $var = self::convertToInt32($var) & 0xffff;
 
         if ($var < 255) {
             return self::writeInt8($var);
@@ -416,7 +431,7 @@ final class Codec
 
     public static function writeInt32V($var)
     {
-        $var = $var & 0xffffffff;
+        $var = self::convertToInt32($var);
 
         if ($var < 0) {
             return self::writeInt8(255).self::writeInt32($var);
@@ -441,7 +456,7 @@ final class Codec
         } else if (bccomp($v, '65535') <= 0) {
             return self::writeInt8(253).self::writeInt16((int)$v);
         } else if (bccomp($v, '4294967295') <= 0) {
-            return self::writeInt8(254).self::writeInt32((float)$v);
+            return self::writeInt8(254).self::writeInt32(self::convertToInt32($v));
         } else {
             return self::writeInt8(255).self::writeInt64($var);
         }
@@ -578,5 +593,96 @@ final class Codec
         }
 
         return $var;
+    }
+
+    private static function zigzagEncode16($var)
+    {
+        $var = self::convertToInt32($var) & 0xffff;
+        if ($var > 32767) {
+            $var -= 65536;
+        }
+
+        return (($var << 1) ^ ($var >> 15)) & 0xffff;
+    }
+
+    private static function zigzagEncode32($var)
+    {
+        $var = self::convertToInt32($var);
+        $ret = ($var << 1) ^ ($var >> 31);
+
+        if (PHP_INT_SIZE === 8) {
+            return $ret;
+        }
+
+        if ($ret < 0) {
+            $ret += 4294967296;
+        }
+
+        return $ret;
+    }
+
+    private static function zigzagDecode16($var)
+    {
+        $var = self::convertToInt32($var) & 0xffff;
+
+        return ($var >> 1) ^ -($var & 1);
+    }
+
+    private static function zigzagDecode32($var)
+    {
+        $var  = self::convertToInt32($var);
+        $half = ($var >> 1) & 0x7fffffff;
+        return ($var & 1) ? -$half - 1 : $half;
+    }
+
+    private static function zigzagEncode64($var)
+    {
+        $high = $var->getHighInt32();
+        $low  = $var->getLowInt32();
+
+        $carry    = ($low < 0) ? 1 : 0;
+        $enc_high = self::convertToInt32($high * 2 + $carry);
+        $enc_low  = self::convertToInt32($low * 2);
+
+        if ($high < 0) {
+            $enc_high = self::convertToInt32(~$enc_high);
+            $enc_low  = self::convertToInt32(~$enc_low);
+        }
+
+        $ret = new UInt64();
+        $ret->setHighInt32($enc_high);
+        $ret->setLowInt32($enc_low);
+
+        return $ret;
+    }
+
+    private static function zigzagDecode64($var)
+    {
+        $high = $var->getHighInt32();
+        $low = $var->getLowInt32();
+
+        $half_high = ($high >> 1) & 0x7fffffff;
+        $half_low  = self::convertToInt32(
+            (($low >> 1) & 0x7fffffff) | (($high & 1) << 31));
+
+        if (($low & 1) === 0) {
+            $dec_high = $half_high;
+            $dec_low  = $half_low;
+        } else {
+            $carry1      = ($half_low === -1) ? 1 : 0;
+            $plus1_low   = self::convertToInt32($half_low + 1);
+            $plus1_high  = self::convertToInt32($half_high + $carry1);
+            $inv_low     = self::convertToInt32(~$plus1_low);
+            $inv_high    = self::convertToInt32(~$plus1_high);
+            $carry2      = ($inv_low === -1) ? 1 : 0;
+            $dec_low     = self::convertToInt32($inv_low + 1);
+            $dec_high    = self::convertToInt32($inv_high + $carry2);
+        }
+
+        $ret = new Int64();
+        $ret->setHighInt32($dec_high);
+        $ret->setLowInt32($dec_low);
+
+        return $ret;
     }
 }

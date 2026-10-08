@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using System.Runtime.CompilerServices;
 
 namespace Brickred.Exchange
 {
@@ -235,6 +236,24 @@ namespace Brickred.Exchange
             val.DecodeFromStream(this);
 
             return val;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static short ZigzagDecode16(ushort val)
+        {
+            return unchecked((short)((val >> 1) ^ -(int)(val & 1)));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int ZigzagDecode32(uint val)
+        {
+            return unchecked((int)(val >> 1) ^ -(int)(val & 1));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static long ZigzagDecode64(ulong val)
+        {
+            return unchecked((long)(val >> 1) ^ -(long)(val & 1));
         }
     }
 }

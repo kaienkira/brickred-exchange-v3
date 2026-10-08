@@ -1,0 +1,15 @@
+﻿<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>Brickred.Exchange</AssemblyName>
+    <Configurations>Debug;Release</Configurations>
+    <Configuration Condition=" '$(Configuration)' == '' ">Release</Configuration>
+    <BaseOutputPath>build/temp/output/</BaseOutputPath>
+    <OutputPath>build/temp/output/$(Configuration)/</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <BaseIntermediateOutputPath Condition=" '$(BaseIntermediateOutputPath)' == '' ">build/temp/intermediate/</BaseIntermediateOutputPath>
+    <IntermediateOutputPath Condition=" '$(IntermediateOutputPath)' == '' ">build/temp/intermediate/$(Configuration)/</IntermediateOutputPath>
+  </PropertyGroup>
+  <Import Sdk="Microsoft.NET.Sdk" Project="Sdk.props"/>
+  <Import Sdk="Microsoft.NET.Sdk" Project="Sdk.targets"/>
+</Project>
