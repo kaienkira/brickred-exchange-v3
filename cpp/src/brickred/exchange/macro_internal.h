@@ -181,6 +181,45 @@
         }                                          \
     } while (0)                                    \
 
+#define READ_INT16VZ(_var)        \
+    do {                          \
+        uint16_t v;               \
+        READ_INT16V(v);           \
+        _var = zigzagDecode16(v); \
+    } while (0)                   \
+
+#define WRITE_INT16VZ(_var)                \
+    do {                                   \
+        uint16_t v = zigzagEncode16(_var); \
+        WRITE_INT16V(v);                   \
+    } while (0)                            \
+
+#define READ_INT32VZ(_var)        \
+    do {                          \
+        uint32_t v;               \
+        READ_INT32V(v);           \
+        _var = zigzagDecode32(v); \
+    } while (0)                   \
+
+#define WRITE_INT32VZ(_var)                \
+    do {                                   \
+        uint32_t v = zigzagEncode32(_var); \
+        WRITE_INT32V(v);                   \
+    } while (0)                            \
+
+#define READ_INT64VZ(_var)        \
+    do {                          \
+        uint64_t v;               \
+        READ_INT64V(v);           \
+        _var = zigzagDecode64(v); \
+    } while (0)                   \
+
+#define WRITE_INT64VZ(_var)                \
+    do {                                   \
+        uint64_t v = zigzagEncode64(_var); \
+        WRITE_INT64V(v);                   \
+    } while (0)                            \
+
 #define READ_ENUM(_var, _enum_type) \
     do {                            \
         int32_t v;                  \
