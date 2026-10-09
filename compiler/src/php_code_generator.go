@@ -85,10 +85,13 @@ func (this *PhpCodeGenerator) getStructFieldPhpTypeDefaultValue(
 		checkType == StructFieldType_I16V ||
 		checkType == StructFieldType_U16V ||
 		checkType == StructFieldType_I32V ||
-		checkType == StructFieldType_U32V {
+		checkType == StructFieldType_U32V ||
+		checkType == StructFieldType_I16VZ ||
+		checkType == StructFieldType_I32VZ {
 		return "0"
 	} else if checkType == StructFieldType_I64 ||
-		checkType == StructFieldType_I64V {
+		checkType == StructFieldType_I64V ||
+		checkType == StructFieldType_I64VZ {
 		return "new Int64()"
 	} else if checkType == StructFieldType_U64 ||
 		checkType == StructFieldType_U64V {
@@ -199,7 +202,8 @@ func (this *PhpCodeGenerator) writeUseStatementsDecl(
 				checkType = def.Type
 			}
 			if checkType == StructFieldType_I64 ||
-				checkType == StructFieldType_I64V {
+				checkType == StructFieldType_I64V ||
+				checkType == StructFieldType_I64VZ {
 				useBrickredExchangeInt64 = true
 			} else if checkType == StructFieldType_U64 ||
 				checkType == StructFieldType_U64V {
@@ -429,6 +433,12 @@ func (this *PhpCodeGenerator) writeOneStructDeclEncodeFuncWriteStatement(
 	} else if checkType == StructFieldType_I64V ||
 		checkType == StructFieldType_U64V {
 		writeFunc = "writeInt64V"
+	} else if checkType == StructFieldType_I16VZ {
+		writeFunc = "writeInt16VZ"
+	} else if checkType == StructFieldType_I32VZ {
+		writeFunc = "writeInt32VZ"
+	} else if checkType == StructFieldType_I64VZ {
+		writeFunc = "writeInt64VZ"
 	} else if checkType == StructFieldType_String ||
 		checkType == StructFieldType_Bytes {
 		writeFunc = "writeString"
@@ -549,6 +559,12 @@ func (this *PhpCodeGenerator) writeOneStructDeclDecodeFuncReadStatement(
 		readFunc = "readInt64V"
 	} else if checkType == StructFieldType_U64V {
 		readFunc = "readUInt64V"
+	} else if checkType == StructFieldType_I16VZ {
+		readFunc = "readInt16VZ"
+	} else if checkType == StructFieldType_I32VZ {
+		readFunc = "readInt32VZ"
+	} else if checkType == StructFieldType_I64VZ {
+		readFunc = "readInt64VZ"
 	} else if checkType == StructFieldType_String ||
 		checkType == StructFieldType_Bytes {
 		readFunc = "readString"
@@ -656,6 +672,8 @@ func (this *PhpCodeGenerator) writeOneStructDeclToArrayFuncWriteStatement(
 		checkType == StructFieldType_U16V ||
 		checkType == StructFieldType_I32V ||
 		checkType == StructFieldType_U32V ||
+		checkType == StructFieldType_I16VZ ||
+		checkType == StructFieldType_I32VZ ||
 		checkType == StructFieldType_String ||
 		checkType == StructFieldType_Bool ||
 		checkType == StructFieldType_Enum {
@@ -684,7 +702,8 @@ func (this *PhpCodeGenerator) writeOneStructDeclToArrayFuncWriteStatement(
 	} else if checkType == StructFieldType_I64 ||
 		checkType == StructFieldType_U64 ||
 		checkType == StructFieldType_I64V ||
-		checkType == StructFieldType_U64V {
+		checkType == StructFieldType_U64V ||
+		checkType == StructFieldType_I64VZ {
 		if isList {
 			this.writeLineFormat(sb,
 				"%s$output['%s'] = [];",
@@ -791,10 +810,13 @@ func (this *PhpCodeGenerator) writeOneStructDeclFromArrayFuncReadStatement(
 		checkType == StructFieldType_U16V ||
 		checkType == StructFieldType_I32V ||
 		checkType == StructFieldType_U32V ||
+		checkType == StructFieldType_I16VZ ||
+		checkType == StructFieldType_I32VZ ||
 		checkType == StructFieldType_Enum {
 		readFunc = "readIntFromArray"
 	} else if checkType == StructFieldType_I64 ||
-		checkType == StructFieldType_I64V {
+		checkType == StructFieldType_I64V ||
+		checkType == StructFieldType_I64VZ {
 		readFunc = "readInt64FromArray"
 	} else if checkType == StructFieldType_U64 ||
 		checkType == StructFieldType_U64V {

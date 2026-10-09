@@ -647,6 +647,12 @@ func (this *ProtocolParser) addStructFieldDef(
 		fieldType = StructFieldType_I64V
 	} else if fieldTypeStr == "u64v" {
 		fieldType = StructFieldType_U64V
+	} else if fieldTypeStr == "i16vz" {
+		fieldType = StructFieldType_I16VZ
+	} else if fieldTypeStr == "i32vz" {
+		fieldType = StructFieldType_I32VZ
+	} else if fieldTypeStr == "i64vz" {
+		fieldType = StructFieldType_I64VZ
 	} else if fieldTypeStr == "string" {
 		fieldType = StructFieldType_String
 	} else if fieldTypeStr == "bytes" {

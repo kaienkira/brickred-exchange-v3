@@ -301,6 +301,9 @@ const (
 	StructFieldType_U32V
 	StructFieldType_I64V
 	StructFieldType_U64V
+	StructFieldType_I16VZ
+	StructFieldType_I32VZ
+	StructFieldType_I64VZ
 	StructFieldType_String
 	StructFieldType_Bytes
 	StructFieldType_Bool
@@ -310,7 +313,7 @@ const (
 )
 
 func StructFieldTypeIsInteger(t StructFieldType) bool {
-	return t >= StructFieldType_I8 && t <= StructFieldType_U64V
+	return t >= StructFieldType_I8 && t <= StructFieldType_I64VZ
 }
 
 // ----------------------------------------------------------------------------

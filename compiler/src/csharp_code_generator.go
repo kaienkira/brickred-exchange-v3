@@ -102,19 +102,22 @@ func (this *CSharpCodeGenerator) getStructFieldCSharpType(
 	} else if checkType == StructFieldType_U8 {
 		csharpType = "byte"
 	} else if checkType == StructFieldType_I16 ||
-		checkType == StructFieldType_I16V {
+		checkType == StructFieldType_I16V ||
+		checkType == StructFieldType_I16VZ {
 		csharpType = "short"
 	} else if checkType == StructFieldType_U16 ||
 		checkType == StructFieldType_U16V {
 		csharpType = "ushort"
 	} else if checkType == StructFieldType_I32 ||
-		checkType == StructFieldType_I32V {
+		checkType == StructFieldType_I32V ||
+		checkType == StructFieldType_I32VZ {
 		csharpType = "int"
 	} else if checkType == StructFieldType_U32 ||
 		checkType == StructFieldType_U32V {
 		csharpType = "uint"
 	} else if checkType == StructFieldType_I64 ||
-		checkType == StructFieldType_I64V {
+		checkType == StructFieldType_I64V ||
+		checkType == StructFieldType_I64VZ {
 		csharpType = "long"
 	} else if checkType == StructFieldType_U64 ||
 		checkType == StructFieldType_U64V {
@@ -627,6 +630,12 @@ func (this *CSharpCodeGenerator) writeOneStructDeclEncodeToStreamFuncWriteStatem
 		writeFunc = "WriteInt64V"
 	} else if checkType == StructFieldType_U64V {
 		writeFunc = "WriteUInt64V"
+	} else if checkType == StructFieldType_I16VZ {
+		writeFunc = "WriteInt16VZ"
+	} else if checkType == StructFieldType_I32VZ {
+		writeFunc = "WriteInt32VZ"
+	} else if checkType == StructFieldType_I64VZ {
+		writeFunc = "WriteInt64VZ"
 	} else if checkType == StructFieldType_String {
 		writeFunc = "WriteString"
 	} else if checkType == StructFieldType_Bytes {
@@ -771,6 +780,12 @@ func (this *CSharpCodeGenerator) writeOneStructDeclDecodeFromStreamFuncReadState
 		readFunc = "ReadInt64V"
 	} else if checkType == StructFieldType_U64V {
 		readFunc = "ReadUInt64V"
+	} else if checkType == StructFieldType_I16VZ {
+		readFunc = "ReadInt16VZ"
+	} else if checkType == StructFieldType_I32VZ {
+		readFunc = "ReadInt32VZ"
+	} else if checkType == StructFieldType_I64VZ {
+		readFunc = "ReadInt64VZ"
 	} else if checkType == StructFieldType_String {
 		readFunc = "ReadString"
 	} else if checkType == StructFieldType_Bytes {

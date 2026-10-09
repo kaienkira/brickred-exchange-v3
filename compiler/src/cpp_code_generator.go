@@ -110,19 +110,22 @@ func (this *CppCodeGenerator) getStructFieldCppType(
 	} else if checkType == StructFieldType_U8 {
 		cppType = "uint8_t"
 	} else if checkType == StructFieldType_I16 ||
-		checkType == StructFieldType_I16V {
+		checkType == StructFieldType_I16V ||
+		checkType == StructFieldType_I16VZ {
 		cppType = "int16_t"
 	} else if checkType == StructFieldType_U16 ||
 		checkType == StructFieldType_U16V {
 		cppType = "uint16_t"
 	} else if checkType == StructFieldType_I32 ||
-		checkType == StructFieldType_I32V {
+		checkType == StructFieldType_I32V ||
+		checkType == StructFieldType_I32VZ {
 		cppType = "int32_t"
 	} else if checkType == StructFieldType_U32 ||
 		checkType == StructFieldType_U32V {
 		cppType = "uint32_t"
 	} else if checkType == StructFieldType_I64 ||
-		checkType == StructFieldType_I64V {
+		checkType == StructFieldType_I64V ||
+		checkType == StructFieldType_I64VZ {
 		cppType = "int64_t"
 	} else if checkType == StructFieldType_U64 ||
 		checkType == StructFieldType_U64V {
@@ -946,6 +949,12 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplEncodeFuncWriteStateme
 	} else if checkType == StructFieldType_I64V ||
 		checkType == StructFieldType_U64V {
 		writeFunc = "WRITE_INT64V"
+	} else if checkType == StructFieldType_I16VZ {
+		writeFunc = "WRITE_INT16VZ"
+	} else if checkType == StructFieldType_I32VZ {
+		writeFunc = "WRITE_INT32VZ"
+	} else if checkType == StructFieldType_I64VZ {
+		writeFunc = "WRITE_INT64VZ"
 	} else if checkType == StructFieldType_String ||
 		checkType == StructFieldType_Bytes {
 		writeFunc = "WRITE_STRING"
@@ -1085,6 +1094,15 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplDecodeFuncReadStatemen
 	} else if checkType == StructFieldType_U64V {
 		readFunc = "READ_INT64V"
 		cppType = "uint64_t"
+	} else if checkType == StructFieldType_I16VZ {
+		readFunc = "READ_INT16VZ"
+		cppType = "int16_t"
+	} else if checkType == StructFieldType_I32VZ {
+		readFunc = "READ_INT32VZ"
+		cppType = "int32_t"
+	} else if checkType == StructFieldType_I64VZ {
+		readFunc = "READ_INT64VZ"
+		cppType = "int64_t"
 	} else if checkType == StructFieldType_String ||
 		checkType == StructFieldType_Bytes {
 		readFunc = "READ_STRING"
@@ -1212,6 +1230,9 @@ func (this *CppCodeGenerator) writeSourceFileOneStructImplDumpFuncWriteStatement
 		checkType == StructFieldType_U32V ||
 		checkType == StructFieldType_I64V ||
 		checkType == StructFieldType_U64V ||
+		checkType == StructFieldType_I16VZ ||
+		checkType == StructFieldType_I32VZ ||
+		checkType == StructFieldType_I64VZ ||
 		checkType == StructFieldType_Bool {
 		if isList {
 			writeStatement = fmt.Sprintf(
