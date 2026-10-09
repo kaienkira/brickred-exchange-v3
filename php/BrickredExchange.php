@@ -336,6 +336,21 @@ final class Codec
         }
     }
 
+    public static function readInt16VZ($s)
+    {
+        return self::zigzagDecode16(self::readUInt16V($s));
+    }
+
+    public static function readInt32VZ($s)
+    {
+        return self::zigzagDecode32(self::readUInt32V($s));
+    }
+
+    public static function readInt64VZ($s)
+    {
+        return self::zigzagDecode64(self::readUInt64V($s));
+    }
+
     public static function readBool($s)
     {
         $var = self::readUInt8($s);
@@ -460,6 +475,21 @@ final class Codec
         } else {
             return self::writeInt8(255).self::writeInt64($var);
         }
+    }
+
+    public static function writeInt16VZ($var)
+    {
+        return self::writeInt16V(self::zigzagEncode16($var));
+    }
+
+    public static function writeInt32VZ($var)
+    {
+        return self::writeInt32V(self::zigzagEncode32($var));
+    }
+
+    public static function writeInt64VZ($var)
+    {
+        return self::writeInt64V(self::zigzagEncode64($var));
     }
 
     public static function writeLength($var)
