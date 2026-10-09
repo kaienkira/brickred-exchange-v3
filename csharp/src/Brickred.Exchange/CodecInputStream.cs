@@ -172,6 +172,21 @@ namespace Brickred.Exchange
             return (long)ReadUInt64V();
         }
 
+        public short ReadInt16VZ()
+        {
+            return ZigzagDecode16(ReadUInt16V());
+        }
+
+        public int ReadInt32VZ()
+        {
+            return ZigzagDecode32(ReadUInt32V());
+        }
+
+        public long ReadInt64VZ()
+        {
+            return ZigzagDecode64(ReadUInt64V());
+        }
+
         public bool ReadBool()
         {
             return ReadUInt8() != 0;

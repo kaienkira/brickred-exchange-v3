@@ -167,6 +167,21 @@ namespace Brickred.Exchange
             WriteUInt64V((ulong)val);
         }
 
+        public void WriteInt16VZ(short val)
+        {
+            WriteUInt16V(ZigzagEncode16(val));
+        }
+
+        public void WriteInt32VZ(int val)
+        {
+            WriteUInt32V(ZigzagEncode32(val));
+        }
+
+        public void WriteInt64VZ(long val)
+        {
+            WriteUInt64V(ZigzagEncode64(val));
+        }
+
         public void WriteBool(bool val)
         {
             WriteUInt8((byte)(val ? 1 : 0));
