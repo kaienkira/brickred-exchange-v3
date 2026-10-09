@@ -181,50 +181,50 @@
         }                                          \
     } while (0)                                    \
 
-#define READ_INT16VZ(_var)        \
-    do {                          \
-        uint16_t v;               \
-        READ_INT16V(v);           \
-        _var = zigzagDecode16(v); \
-    } while (0)                   \
+#define READ_INT16VZ(_var)           \
+    do {                             \
+        uint16_t __vz;               \
+        READ_INT16V(__vz);           \
+        _var = zigzagDecode16(__vz); \
+    } while (0)                      \
 
-#define WRITE_INT16VZ(_var)                \
-    do {                                   \
-        uint16_t v = zigzagEncode16(_var); \
-        WRITE_INT16V(v);                   \
-    } while (0)                            \
+#define WRITE_INT16VZ(_var)                   \
+    do {                                      \
+        uint16_t __vz = zigzagEncode16(_var); \
+        WRITE_INT16V(__vz);                   \
+    } while (0)                               \
 
-#define READ_INT32VZ(_var)        \
-    do {                          \
-        uint32_t v;               \
-        READ_INT32V(v);           \
-        _var = zigzagDecode32(v); \
-    } while (0)                   \
+#define READ_INT32VZ(_var)           \
+    do {                             \
+        uint32_t __vz;               \
+        READ_INT32V(__vz);           \
+        _var = zigzagDecode32(__vz); \
+    } while (0)                      \
 
-#define WRITE_INT32VZ(_var)                \
-    do {                                   \
-        uint32_t v = zigzagEncode32(_var); \
-        WRITE_INT32V(v);                   \
-    } while (0)                            \
+#define WRITE_INT32VZ(_var)                   \
+    do {                                      \
+        uint32_t __vz = zigzagEncode32(_var); \
+        WRITE_INT32V(__vz);                   \
+    } while (0)                               \
 
-#define READ_INT64VZ(_var)        \
-    do {                          \
-        uint64_t v;               \
-        READ_INT64V(v);           \
-        _var = zigzagDecode64(v); \
-    } while (0)                   \
+#define READ_INT64VZ(_var)           \
+    do {                             \
+        uint64_t __vz;               \
+        READ_INT64V(__vz);           \
+        _var = zigzagDecode64(__vz); \
+    } while (0)                      \
 
-#define WRITE_INT64VZ(_var)                \
-    do {                                   \
-        uint64_t v = zigzagEncode64(_var); \
-        WRITE_INT64V(v);                   \
-    } while (0)                            \
+#define WRITE_INT64VZ(_var)                   \
+    do {                                      \
+        uint64_t __vz = zigzagEncode64(_var); \
+        WRITE_INT64V(__vz);                   \
+    } while (0)                               \
 
 #define READ_ENUM(_var, _enum_type) \
     do {                            \
-        int32_t v;                  \
-        READ_INT32V(v);             \
-        _var = (_enum_type)v;       \
+        int32_t __ve;               \
+        READ_INT32V(__ve);          \
+        _var = (_enum_type)__ve;    \
     } while (0)                     \
 
 #define WRITE_ENUM(_var) WRITE_INT32V((int)_var)
@@ -256,17 +256,17 @@
         }                                   \
     } while (0)                             \
 
-#define READ_STRING(_var)          \
-    do {                           \
-        size_t length;             \
-        READ_LENGTH(length);       \
-        if (left_bytes < length) { \
-            return -1;             \
-        }                          \
-        _var.assign(p, length);    \
-        p += length;               \
-        left_bytes -= length;      \
-    } while (0)                    \
+#define READ_STRING(_var)             \
+    do {                              \
+        size_t __str_len;             \
+        READ_LENGTH(__str_len);       \
+        if (left_bytes < __str_len) { \
+            return -1;                \
+        }                             \
+        _var.assign(p, __str_len);    \
+        p += __str_len;               \
+        left_bytes -= __str_len;      \
+    } while (0)                       \
 
 #define WRITE_STRING(_var)                      \
     do {                                        \
@@ -279,51 +279,51 @@
         left_bytes -= _var.size();              \
     } while (0)                                 \
 
-#define READ_STRUCT(_var)                             \
-    do {                                              \
-        int struct_size = _var.decode(p, left_bytes); \
-        if (-1 == struct_size) {                      \
-            return -1;                                \
-        }                                             \
-        p += struct_size;                             \
-        left_bytes -= struct_size;                    \
-    } while (0)                                       \
+#define READ_STRUCT(_var)                               \
+    do {                                                \
+        int __struct_size = _var.decode(p, left_bytes); \
+        if (-1 == __struct_size) {                      \
+            return -1;                                  \
+        }                                               \
+        p += __struct_size;                             \
+        left_bytes -= __struct_size;                    \
+    } while (0)                                         \
 
-#define WRITE_STRUCT(_var)                            \
-    do {                                              \
-        int struct_size = _var.encode(p, left_bytes); \
-        if (-1 == struct_size) {                      \
-            return -1;                                \
-        }                                             \
-        p += struct_size;                             \
-        left_bytes -= struct_size;                    \
-    } while (0)                                       \
+#define WRITE_STRUCT(_var)                              \
+    do {                                                \
+        int __struct_size = _var.encode(p, left_bytes); \
+        if (-1 == __struct_size) {                      \
+            return -1;                                  \
+        }                                               \
+        p += __struct_size;                             \
+        left_bytes -= __struct_size;                    \
+    } while (0)                                         \
 
-#define READ_LIST(_var, _read_func, _list_cpp_type) \
-    do {                                            \
-        size_t length;                              \
-        READ_LENGTH(length);                        \
-        _var.clear();                               \
-        _var.reserve(length);                       \
-        for (size_t i = 0; i < length; ++i) {       \
-            _list_cpp_type v;                       \
-            _read_func(v);                          \
-            _var.push_back(v);                      \
-        }                                           \
-    } while (0)                                     \
+#define READ_LIST(_var, _read_func, _list_cpp_type)  \
+    do {                                             \
+        size_t __list_length;                        \
+        READ_LENGTH(__list_length);                  \
+        _var.clear();                                \
+        _var.reserve(__list_length);                 \
+        for (size_t i = 0; i < __list_length; ++i) { \
+            _list_cpp_type __vl;                     \
+            _read_func(__vl);                        \
+            _var.push_back(__vl);                    \
+        }                                            \
+    } while (0)                                      \
 
-#define READ_ENUM_LIST(_var, _enum_type)      \
-    do {                                      \
-        size_t length;                        \
-        READ_LENGTH(length);                  \
-        _var.clear();                         \
-        _var.reserve(length);                 \
-        for (size_t i = 0; i < length; ++i) { \
-            _enum_type v2;                    \
-            READ_ENUM(v2, _enum_type);        \
-            _var.push_back(v2);               \
-        }                                     \
-    } while (0)                               \
+#define READ_ENUM_LIST(_var, _enum_type)             \
+    do {                                             \
+        size_t __list_length;                        \
+        READ_LENGTH(__list_length);                  \
+        _var.clear();                                \
+        _var.reserve(__list_length);                 \
+        for (size_t i = 0; i < __list_length; ++i) { \
+            _enum_type __vl;                         \
+            READ_ENUM(__vl, _enum_type);             \
+            _var.push_back(__vl);                    \
+        }                                            \
+    } while (0)                                      \
 
 #define WRITE_LIST(_var, _write_func)              \
     do {                                           \
