@@ -640,10 +640,12 @@ final class Codec
         $high = $var->getHighInt32();
         $low  = $var->getLowInt32();
 
+        // enc = (v << 1) ^ (v >> 63)
+        // -- v << 1
         $carry    = ($low < 0) ? 1 : 0;
         $enc_high = self::convertToInt32($high * 2 + $carry);
         $enc_low  = self::convertToInt32($low * 2);
-
+        // -- ^ all one equal ~
         if ($high < 0) {
             $enc_high = self::convertToInt32(~$enc_high);
             $enc_low  = self::convertToInt32(~$enc_low);
@@ -661,22 +663,20 @@ final class Codec
         $high = $var->getHighInt32();
         $low = $var->getLowInt32();
 
+        // dec = (v >> 1) ^ -(v & 1)
+        // -- v >> 1
         $half_high = ($high >> 1) & 0x7fffffff;
         $half_low  = self::convertToInt32(
             (($low >> 1) & 0x7fffffff) | (($high & 1) << 31));
 
         if (($low & 1) === 0) {
+            // ^ all zero
             $dec_high = $half_high;
             $dec_low  = $half_low;
         } else {
-            $carry1      = ($half_low === -1) ? 1 : 0;
-            $plus1_low   = self::convertToInt32($half_low + 1);
-            $plus1_high  = self::convertToInt32($half_high + $carry1);
-            $inv_low     = self::convertToInt32(~$plus1_low);
-            $inv_high    = self::convertToInt32(~$plus1_high);
-            $carry2      = ($inv_low === -1) ? 1 : 0;
-            $dec_low     = self::convertToInt32($inv_low + 1);
-            $dec_high    = self::convertToInt32($inv_high + $carry2);
+            // ^ all one equal ~
+            $dec_low  = self::convertToInt32(~$half_low);
+            $dec_high = self::convertToInt32(~$half_high);
         }
 
         $ret = new Int64();
