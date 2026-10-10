@@ -491,6 +491,9 @@
   <required name="b16" type="list{u32v}"/>
   <required name="b17" type="list{i64v}"/>
   <required name="b18" type="list{u64v}"/>
+  <required name="b19" type="list{i16vz}"/>
+  <required name="b20" type="list{i32vz}"/>
+  <required name="b21" type="list{i64vz}"/>
   <optional name="c1" type="i32"/>
   <optional name="c2" type="i32"/>
   <optional name="c3" type="list{i32}"/>

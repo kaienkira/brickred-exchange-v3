@@ -452,6 +452,58 @@ int main()
         msg.a20_30 = 16777216;
         msg.a20_31 = 1000000000;
         msg.a20_32 = 2147483647;
+        // i64vz
+        msg.a21 = 0x7fffffffffffffff;
+        msg.a21_1 = -9223372036854775807 - 1;
+        msg.a21_2 = -9223372036854775807;
+        msg.a21_3 = -72057594037927936;
+        msg.a21_4 = -72057594037927935;
+        msg.a21_5 = -281474976710656;
+        msg.a21_6 = -281474976710655;
+        msg.a21_7 = -1099511627776;
+        msg.a21_8 = -1099511627775;
+        msg.a21_9 = -4294967296;
+        msg.a21_10 = -4294967295;
+        msg.a21_11 = -2147483648;
+        msg.a21_12 = -2147483647;
+        msg.a21_13 = -16777216;
+        msg.a21_14 = -16777215;
+        msg.a21_15 = -65536;
+        msg.a21_16 = -65535;
+        msg.a21_17 = -32768;
+        msg.a21_18 = -32767;
+        msg.a21_19 = -16384;
+        msg.a21_20 = -16383;
+        msg.a21_21 = -256;
+        msg.a21_22 = -255;
+        msg.a21_23 = -128;
+        msg.a21_24 = -127;
+        msg.a21_25 = -1;
+        msg.a21_26 = 0;
+        msg.a21_27 = 1;
+        msg.a21_28 = 127;
+        msg.a21_29 = 128;
+        msg.a21_30 = 255;
+        msg.a21_31 = 256;
+        msg.a21_32 = 16383;
+        msg.a21_33 = 16384;
+        msg.a21_34 = 32767;
+        msg.a21_35 = 32768;
+        msg.a21_36 = 65535;
+        msg.a21_37 = 65536;
+        msg.a21_38 = 16777215;
+        msg.a21_39 = 16777216;
+        msg.a21_40 = 2147483647;
+        msg.a21_41 = 2147483648;
+        msg.a21_42 = 4294967295;
+        msg.a21_43 = 4294967296;
+        msg.a21_44 = 1099511627775;
+        msg.a21_45 = 1099511627776;
+        msg.a21_46 = 281474976710655;
+        msg.a21_47 = 281474976710656;
+        msg.a21_48 = 72057594037927935;
+        msg.a21_49 = 72057594037927936;
+        msg.a21_50 = 9223372036854775807;
 
         for (int i = 0; i < 254; ++i) {
             msg.b5.push_back(i);
@@ -471,6 +523,16 @@ int main()
         }
         for (int i = 0; i < 10; ++i) {
             msg.b18.push_back(msg.a18);
+        }
+
+        for (int i = 0; i < 10; ++i) {
+            msg.b19.push_back(msg.a19);
+        }
+        for (int i = 0; i < 10; ++i) {
+            msg.b20.push_back(msg.a20);
+        }
+        for (int i = 0; i < 10; ++i) {
+            msg.b21.push_back(msg.a21);
         }
 
         msg.set_c1(1);
@@ -916,6 +978,57 @@ int main()
                   << "a20_30 = " << msg->a20_30 << std::endl
                   << "a20_31 = " << msg->a20_31 << std::endl
                   << "a20_32 = " << msg->a20_32 << std::endl
+                  << "a21 = " << msg->a21 << std::endl
+                  << "a21_1 = " << msg->a21_1 << std::endl
+                  << "a21_2 = " << msg->a21_2 << std::endl
+                  << "a21_3 = " << msg->a21_3 << std::endl
+                  << "a21_4 = " << msg->a21_4 << std::endl
+                  << "a21_5 = " << msg->a21_5 << std::endl
+                  << "a21_6 = " << msg->a21_6 << std::endl
+                  << "a21_7 = " << msg->a21_7 << std::endl
+                  << "a21_8 = " << msg->a21_8 << std::endl
+                  << "a21_9 = " << msg->a21_9 << std::endl
+                  << "a21_10 = " << msg->a21_10 << std::endl
+                  << "a21_11 = " << msg->a21_11 << std::endl
+                  << "a21_12 = " << msg->a21_12 << std::endl
+                  << "a21_13 = " << msg->a21_13 << std::endl
+                  << "a21_14 = " << msg->a21_14 << std::endl
+                  << "a21_15 = " << msg->a21_15 << std::endl
+                  << "a21_16 = " << msg->a21_16 << std::endl
+                  << "a21_17 = " << msg->a21_17 << std::endl
+                  << "a21_18 = " << msg->a21_18 << std::endl
+                  << "a21_19 = " << msg->a21_19 << std::endl
+                  << "a21_20 = " << msg->a21_20 << std::endl
+                  << "a21_21 = " << msg->a21_21 << std::endl
+                  << "a21_22 = " << msg->a21_22 << std::endl
+                  << "a21_23 = " << msg->a21_23 << std::endl
+                  << "a21_24 = " << msg->a21_24 << std::endl
+                  << "a21_25 = " << msg->a21_25 << std::endl
+                  << "a21_26 = " << msg->a21_26 << std::endl
+                  << "a21_27 = " << msg->a21_27 << std::endl
+                  << "a21_28 = " << msg->a21_28 << std::endl
+                  << "a21_29 = " << msg->a21_29 << std::endl
+                  << "a21_30 = " << msg->a21_30 << std::endl
+                  << "a21_31 = " << msg->a21_31 << std::endl
+                  << "a21_32 = " << msg->a21_32 << std::endl
+                  << "a21_33 = " << msg->a21_33 << std::endl
+                  << "a21_34 = " << msg->a21_34 << std::endl
+                  << "a21_35 = " << msg->a21_35 << std::endl
+                  << "a21_36 = " << msg->a21_36 << std::endl
+                  << "a21_37 = " << msg->a21_37 << std::endl
+                  << "a21_38 = " << msg->a21_38 << std::endl
+                  << "a21_39 = " << msg->a21_39 << std::endl
+                  << "a21_40 = " << msg->a21_40 << std::endl
+                  << "a21_41 = " << msg->a21_41 << std::endl
+                  << "a21_42 = " << msg->a21_42 << std::endl
+                  << "a21_43 = " << msg->a21_43 << std::endl
+                  << "a21_44 = " << msg->a21_44 << std::endl
+                  << "a21_45 = " << msg->a21_45 << std::endl
+                  << "a21_46 = " << msg->a21_46 << std::endl
+                  << "a21_47 = " << msg->a21_47 << std::endl
+                  << "a21_48 = " << msg->a21_48 << std::endl
+                  << "a21_49 = " << msg->a21_49 << std::endl
+                  << "a21_50 = " << msg->a21_50 << std::endl
                   << "b5 size = " << msg->b5.size() << std::endl
                   << "b5[253] = " << msg->b5[253] << std::endl
                   << "b7 size = " << msg->b7.size() << std::endl

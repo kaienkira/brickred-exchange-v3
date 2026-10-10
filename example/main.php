@@ -528,6 +528,58 @@ $msg->a20_29 = 16777215;
 $msg->a20_30 = 16777216;
 $msg->a20_31 = 1000000000;
 $msg->a20_32 = 2147483647;
+// i64vz
+$msg->a21->reset(0x7fffffff, 0xffffffff);
+$msg->a21_1->fromString('-9223372036854775808');
+$msg->a21_2->fromString('-9223372036854775807');
+$msg->a21_3->fromString('-72057594037927936');
+$msg->a21_4->fromString('-72057594037927935');
+$msg->a21_5->fromString('-281474976710656');
+$msg->a21_6->fromString('-281474976710655');
+$msg->a21_7->fromString('-1099511627776');
+$msg->a21_8->fromString('-1099511627775');
+$msg->a21_9->fromString('-4294967296');
+$msg->a21_10->fromString('-4294967295');
+$msg->a21_11->fromString('-2147483648');
+$msg->a21_12->fromString('-2147483647');
+$msg->a21_13->fromString('-16777216');
+$msg->a21_14->fromString('-16777215');
+$msg->a21_15->fromString('-65536');
+$msg->a21_16->fromString('-65535');
+$msg->a21_17->fromString('-32768');
+$msg->a21_18->fromString('-32767');
+$msg->a21_19->fromString('-16384');
+$msg->a21_20->fromString('-16383');
+$msg->a21_21->fromString('-256');
+$msg->a21_22->fromString('-255');
+$msg->a21_23->fromString('-128');
+$msg->a21_24->fromString('-127');
+$msg->a21_25->fromString('-1');
+$msg->a21_26->fromString('0');
+$msg->a21_27->fromString('1');
+$msg->a21_28->fromString('127');
+$msg->a21_29->fromString('128');
+$msg->a21_30->fromString('255');
+$msg->a21_31->fromString('256');
+$msg->a21_32->fromString('16383');
+$msg->a21_33->fromString('16384');
+$msg->a21_34->fromString('32767');
+$msg->a21_35->fromString('32768');
+$msg->a21_36->fromString('65535');
+$msg->a21_37->fromString('65536');
+$msg->a21_38->fromString('16777215');
+$msg->a21_39->fromString('16777216');
+$msg->a21_40->fromString('2147483647');
+$msg->a21_41->fromString('2147483648');
+$msg->a21_42->fromString('4294967295');
+$msg->a21_43->fromString('4294967296');
+$msg->a21_44->fromString('1099511627775');
+$msg->a21_45->fromString('1099511627776');
+$msg->a21_46->fromString('281474976710655');
+$msg->a21_47->fromString('281474976710656');
+$msg->a21_48->fromString('72057594037927935');
+$msg->a21_49->fromString('72057594037927936');
+$msg->a21_50->fromString('9223372036854775807');
 
 for ($i = 0; $i < 254; ++$i) {
     array_push($msg->b5, $i);
@@ -547,6 +599,16 @@ for ($i = 0; $i < 10; ++$i) {
 }
 for ($i = 0; $i < 10; ++$i) {
     array_push($msg->b18, clone $msg->a18);
+}
+
+for ($i = 0; $i < 10; ++$i) {
+    array_push($msg->b19, $msg->a19);
+}
+for ($i = 0; $i < 10; ++$i) {
+    array_push($msg->b20, $msg->a20);
+}
+for ($i = 0; $i < 10; ++$i) {
+    array_push($msg->b21, clone $msg->a21);
 }
 
 $msg->set_c1(1);
@@ -986,6 +1048,57 @@ echo 'encode_size = '.strlen($bin)."\n".
      "a20_30 = $msg->a20_30\n".
      "a20_31 = $msg->a20_31\n".
      "a20_32 = $msg->a20_32\n".
+     "a21 = ".$msg->a21->getValue()."\n".
+     "a21_1 = ".$msg->a21_1->getValue()."\n".
+     "a21_2 = ".$msg->a21_2->getValue()."\n".
+     "a21_3 = ".$msg->a21_3->getValue()."\n".
+     "a21_4 = ".$msg->a21_4->getValue()."\n".
+     "a21_5 = ".$msg->a21_5->getValue()."\n".
+     "a21_6 = ".$msg->a21_6->getValue()."\n".
+     "a21_7 = ".$msg->a21_7->getValue()."\n".
+     "a21_8 = ".$msg->a21_8->getValue()."\n".
+     "a21_9 = ".$msg->a21_9->getValue()."\n".
+     "a21_10 = ".$msg->a21_10->getValue()."\n".
+     "a21_11 = ".$msg->a21_11->getValue()."\n".
+     "a21_12 = ".$msg->a21_12->getValue()."\n".
+     "a21_13 = ".$msg->a21_13->getValue()."\n".
+     "a21_14 = ".$msg->a21_14->getValue()."\n".
+     "a21_15 = ".$msg->a21_15->getValue()."\n".
+     "a21_16 = ".$msg->a21_16->getValue()."\n".
+     "a21_17 = ".$msg->a21_17->getValue()."\n".
+     "a21_18 = ".$msg->a21_18->getValue()."\n".
+     "a21_19 = ".$msg->a21_19->getValue()."\n".
+     "a21_20 = ".$msg->a21_20->getValue()."\n".
+     "a21_21 = ".$msg->a21_21->getValue()."\n".
+     "a21_22 = ".$msg->a21_22->getValue()."\n".
+     "a21_23 = ".$msg->a21_23->getValue()."\n".
+     "a21_24 = ".$msg->a21_24->getValue()."\n".
+     "a21_25 = ".$msg->a21_25->getValue()."\n".
+     "a21_26 = ".$msg->a21_26->getValue()."\n".
+     "a21_27 = ".$msg->a21_27->getValue()."\n".
+     "a21_28 = ".$msg->a21_28->getValue()."\n".
+     "a21_29 = ".$msg->a21_29->getValue()."\n".
+     "a21_30 = ".$msg->a21_30->getValue()."\n".
+     "a21_31 = ".$msg->a21_31->getValue()."\n".
+     "a21_32 = ".$msg->a21_32->getValue()."\n".
+     "a21_33 = ".$msg->a21_33->getValue()."\n".
+     "a21_34 = ".$msg->a21_34->getValue()."\n".
+     "a21_35 = ".$msg->a21_35->getValue()."\n".
+     "a21_36 = ".$msg->a21_36->getValue()."\n".
+     "a21_37 = ".$msg->a21_37->getValue()."\n".
+     "a21_38 = ".$msg->a21_38->getValue()."\n".
+     "a21_39 = ".$msg->a21_39->getValue()."\n".
+     "a21_40 = ".$msg->a21_40->getValue()."\n".
+     "a21_41 = ".$msg->a21_41->getValue()."\n".
+     "a21_42 = ".$msg->a21_42->getValue()."\n".
+     "a21_43 = ".$msg->a21_43->getValue()."\n".
+     "a21_44 = ".$msg->a21_44->getValue()."\n".
+     "a21_45 = ".$msg->a21_45->getValue()."\n".
+     "a21_46 = ".$msg->a21_46->getValue()."\n".
+     "a21_47 = ".$msg->a21_47->getValue()."\n".
+     "a21_48 = ".$msg->a21_48->getValue()."\n".
+     "a21_49 = ".$msg->a21_49->getValue()."\n".
+     "a21_50 = ".$msg->a21_50->getValue()."\n".
      "b5 size = ".count($msg->b5)."\n".
      "b5[253] = ".$msg->b5[253]."\n".
      "b7 size = ".count($msg->b7)."\n".

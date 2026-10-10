@@ -450,6 +450,58 @@ public class App
             msg.a20_30 = 16777216;
             msg.a20_31 = 1000000000;
             msg.a20_32 = 2147483647;
+            // i64vz
+            msg.a21 = 0x7fffffffffffffff;
+            msg.a21_1 = -9223372036854775808;
+            msg.a21_2 = -9223372036854775807;
+            msg.a21_3 = -72057594037927936;
+            msg.a21_4 = -72057594037927935;
+            msg.a21_5 = -281474976710656;
+            msg.a21_6 = -281474976710655;
+            msg.a21_7 = -1099511627776;
+            msg.a21_8 = -1099511627775;
+            msg.a21_9 = -4294967296;
+            msg.a21_10 = -4294967295;
+            msg.a21_11 = -2147483648;
+            msg.a21_12 = -2147483647;
+            msg.a21_13 = -16777216;
+            msg.a21_14 = -16777215;
+            msg.a21_15 = -65536;
+            msg.a21_16 = -65535;
+            msg.a21_17 = -32768;
+            msg.a21_18 = -32767;
+            msg.a21_19 = -16384;
+            msg.a21_20 = -16383;
+            msg.a21_21 = -256;
+            msg.a21_22 = -255;
+            msg.a21_23 = -128;
+            msg.a21_24 = -127;
+            msg.a21_25 = -1;
+            msg.a21_26 = 0;
+            msg.a21_27 = 1;
+            msg.a21_28 = 127;
+            msg.a21_29 = 128;
+            msg.a21_30 = 255;
+            msg.a21_31 = 256;
+            msg.a21_32 = 16383;
+            msg.a21_33 = 16384;
+            msg.a21_34 = 32767;
+            msg.a21_35 = 32768;
+            msg.a21_36 = 65535;
+            msg.a21_37 = 65536;
+            msg.a21_38 = 16777215;
+            msg.a21_39 = 16777216;
+            msg.a21_40 = 2147483647;
+            msg.a21_41 = 2147483648;
+            msg.a21_42 = 4294967295;
+            msg.a21_43 = 4294967296;
+            msg.a21_44 = 1099511627775;
+            msg.a21_45 = 1099511627776;
+            msg.a21_46 = 281474976710655;
+            msg.a21_47 = 281474976710656;
+            msg.a21_48 = 72057594037927935;
+            msg.a21_49 = 72057594037927936;
+            msg.a21_50 = 9223372036854775807;
 
             for (int i = 0; i < 254; ++i) {
                 msg.b5.Add(i);
@@ -469,6 +521,16 @@ public class App
             }
             for (int i = 0; i < 10; ++i) {
                 msg.b18.Add(msg.a18);
+            }
+
+            for (int i = 0; i < 10; ++i) {
+                msg.b19.Add(msg.a19);
+            }
+            for (int i = 0; i < 10; ++i) {
+                msg.b20.Add(msg.a20);
+            }
+            for (int i = 0; i < 10; ++i) {
+                msg.b21.Add(msg.a21);
             }
 
             msg.set_c1(1);
@@ -913,6 +975,57 @@ public class App
             s.AppendFormat("a20_30 = {0}\n", msg.a20_30);
             s.AppendFormat("a20_31 = {0}\n", msg.a20_31);
             s.AppendFormat("a20_32 = {0}\n", msg.a20_32);
+            s.AppendFormat("a21 = {0}\n", msg.a21);
+            s.AppendFormat("a21_1 = {0}\n", msg.a21_1);
+            s.AppendFormat("a21_2 = {0}\n", msg.a21_2);
+            s.AppendFormat("a21_3 = {0}\n", msg.a21_3);
+            s.AppendFormat("a21_4 = {0}\n", msg.a21_4);
+            s.AppendFormat("a21_5 = {0}\n", msg.a21_5);
+            s.AppendFormat("a21_6 = {0}\n", msg.a21_6);
+            s.AppendFormat("a21_7 = {0}\n", msg.a21_7);
+            s.AppendFormat("a21_8 = {0}\n", msg.a21_8);
+            s.AppendFormat("a21_9 = {0}\n", msg.a21_9);
+            s.AppendFormat("a21_10 = {0}\n", msg.a21_10);
+            s.AppendFormat("a21_11 = {0}\n", msg.a21_11);
+            s.AppendFormat("a21_12 = {0}\n", msg.a21_12);
+            s.AppendFormat("a21_13 = {0}\n", msg.a21_13);
+            s.AppendFormat("a21_14 = {0}\n", msg.a21_14);
+            s.AppendFormat("a21_15 = {0}\n", msg.a21_15);
+            s.AppendFormat("a21_16 = {0}\n", msg.a21_16);
+            s.AppendFormat("a21_17 = {0}\n", msg.a21_17);
+            s.AppendFormat("a21_18 = {0}\n", msg.a21_18);
+            s.AppendFormat("a21_19 = {0}\n", msg.a21_19);
+            s.AppendFormat("a21_20 = {0}\n", msg.a21_20);
+            s.AppendFormat("a21_21 = {0}\n", msg.a21_21);
+            s.AppendFormat("a21_22 = {0}\n", msg.a21_22);
+            s.AppendFormat("a21_23 = {0}\n", msg.a21_23);
+            s.AppendFormat("a21_24 = {0}\n", msg.a21_24);
+            s.AppendFormat("a21_25 = {0}\n", msg.a21_25);
+            s.AppendFormat("a21_26 = {0}\n", msg.a21_26);
+            s.AppendFormat("a21_27 = {0}\n", msg.a21_27);
+            s.AppendFormat("a21_28 = {0}\n", msg.a21_28);
+            s.AppendFormat("a21_29 = {0}\n", msg.a21_29);
+            s.AppendFormat("a21_30 = {0}\n", msg.a21_30);
+            s.AppendFormat("a21_31 = {0}\n", msg.a21_31);
+            s.AppendFormat("a21_32 = {0}\n", msg.a21_32);
+            s.AppendFormat("a21_33 = {0}\n", msg.a21_33);
+            s.AppendFormat("a21_34 = {0}\n", msg.a21_34);
+            s.AppendFormat("a21_35 = {0}\n", msg.a21_35);
+            s.AppendFormat("a21_36 = {0}\n", msg.a21_36);
+            s.AppendFormat("a21_37 = {0}\n", msg.a21_37);
+            s.AppendFormat("a21_38 = {0}\n", msg.a21_38);
+            s.AppendFormat("a21_39 = {0}\n", msg.a21_39);
+            s.AppendFormat("a21_40 = {0}\n", msg.a21_40);
+            s.AppendFormat("a21_41 = {0}\n", msg.a21_41);
+            s.AppendFormat("a21_42 = {0}\n", msg.a21_42);
+            s.AppendFormat("a21_43 = {0}\n", msg.a21_43);
+            s.AppendFormat("a21_44 = {0}\n", msg.a21_44);
+            s.AppendFormat("a21_45 = {0}\n", msg.a21_45);
+            s.AppendFormat("a21_46 = {0}\n", msg.a21_46);
+            s.AppendFormat("a21_47 = {0}\n", msg.a21_47);
+            s.AppendFormat("a21_48 = {0}\n", msg.a21_48);
+            s.AppendFormat("a21_49 = {0}\n", msg.a21_49);
+            s.AppendFormat("a21_50 = {0}\n", msg.a21_50);
             s.AppendFormat("b5 size = {0}\n", msg.b5.Count);
             s.AppendFormat("b5[253] = {0}\n", msg.b5[253]);
             s.AppendFormat("b7 size = {0}\n", msg.b7.Count);
